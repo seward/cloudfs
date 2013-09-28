@@ -1,0 +1,31 @@
+
+   cloudfs: howto document
+	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+
+Steps
+-----
+
+1. Run ./config.sh && make
+2. Copy bin/cloudfs to /usr/sbin/
+3. Copy bin/cloudfs.conf to ~/.cloudfs.conf
+4. Edit ~/.cloudfs.conf
+
+Usage
+-----
+
+Listing volumes:
+	cloudfs --list
+	
+Create a new volume:
+	cloudfs --volume [volume] --create
+	
+Mounting the volume:
+	cloudfs --volume [volume] --mount [directory]
+	
+Unmounting the volume:
+	cloudfs --volume [volume] --unmount [directory]
+		or
+	umount [directory]
+	
+Deleting the volume:
+	cloudfs --volume [volume] --delete

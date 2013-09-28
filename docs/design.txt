@@ -1,0 +1,13 @@
+
+   cloudfs: design document
+	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+
+
+* Todo
+	- FSCK support
+	- Snapshot support
+	- Add disk cache support
+	- Add services
+		- Google Cloud Storage
+		- Microsoft Azure
+		- Rackspace Store
