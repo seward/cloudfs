@@ -1,7 +1,10 @@
-
 cloudfs
 ====
-Cloud virtual filesystem and block device
+Cloudfs creates an object filesystem or block device on top of
+popular cloud storage services.  This filesystem can only be
+accessed with cloudfs only.  It also supports transparent encryption
+and zlib compression. As of right now, I only have support
+for Amazon S3, but plan on adding others in the future.
 
 
 Author
@@ -15,18 +18,10 @@ http://byteworm.com
 
 Requirements
 ----
-1. Linux >2.6
+1. Linux
 
 2. libfuse
 
-
-How it works
-----
-Cloudfs creates an object filesystem or block device on top of
-popular cloud storage services.  This filesystem can only be
-accessed with cloudfs only.  It also supports transparent encryption
-and zlib compression. As of right now, I only have support
-for Amazon S3, but plan on adding others in the future.
 
 
 Compiling
