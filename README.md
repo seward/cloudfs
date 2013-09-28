@@ -1,8 +1,16 @@
 
-cloudfs: Cloud virtual filesystem and block device
-By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+cloudfs
+====
+Cloud virtual filesystem and block device
 
-You can contact me at bysin@bysin.net
+
+Author
+----
+Benjamin Kittridge
+
+bysin@bysin.net
+
+http://byteworm.com
 
 
 Requirements
@@ -34,22 +42,22 @@ Compiling
 
 Command-line options
 ----
-Listing volumes:
-	cloudfs --list
+    Listing volumes:
+    	cloudfs --list
 	
-Create a new volume:
-	cloudfs --volume [volume] --create
+    Create a new volume:
+    	cloudfs --volume [volume] --create
 	
-Mounting the volume:
-	cloudfs --volume [volume] --mount [directory]
+    Mounting the volume:
+    	cloudfs --volume [volume] --mount [directory]
 	
-Unmounting the volume:
-	cloudfs --volume [volume] --unmount [directory]
-		or
-	umount [directory]
+    Unmounting the volume:
+    	cloudfs --volume [volume] --unmount [directory]
+    		or
+    	umount [directory]
 	
-Deleting the volume:
-	cloudfs --volume [volume] --delete
+    Deleting the volume:
+    	cloudfs --volume [volume] --delete
 
 
 Tips and tricks
