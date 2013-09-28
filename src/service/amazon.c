@@ -291,7 +291,8 @@ int amazon_request_call(enum amazon_request_method method,
 		c = amazon_request_new(method, bucket, object);
 		amazon_request_set_req(c, data, data_len);
 		amazon_request_perform(c);
-		if (c->resp_code == 500) {
+		if (!c->resp_code || c->resp_code == 500) {
+			warning("Failure while contacting Amazon S3, retrying...");
 			amazon_request_free(c);
 			continue;
 		}
