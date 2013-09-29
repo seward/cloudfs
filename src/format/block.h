@@ -30,11 +30,12 @@ extern const struct volume_intr block_intr;
 // Section:     Connect to nbd
 
 void block_mount(const struct volume_metadata *md, const char *path);
+void block_unmount(const struct volume_metadata *md, const char *path);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Disconnect from nbd
 
-void block_unmount();
+void block_disconnect();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Modprobe

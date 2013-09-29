@@ -40,6 +40,7 @@
 
 const struct volume_intr block_intr = {
 	.mount		= block_mount,
+	.unmount	= block_unmount,
 	
 	.flags		= VOLUME_NEED_SIZE,
 };
@@ -88,14 +89,22 @@ void block_mount(const struct volume_metadata *md, const char *path) {
 	
 	notice("Volume disconnecting");
 	
-	block_unmount();
+	block_disconnect();
 	object_unload();
+}
+
+void block_unmount(const struct volume_metadata *md, const char *path) {
+	if ((block_nbd_dev = open(path, O_RDWR)) < 0)
+		error("Unable to open nbd device %s, "
+				"you must be root to open /dev/nbd*", path);
+	
+	block_disconnect();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Disconnect from nbd
 
-void block_unmount() {
+void block_disconnect() {
 	if (block_nbd_dev >= 0) {
 		ioctl(block_nbd_dev, NBD_CLEAR_QUE);
 		ioctl(block_nbd_dev, NBD_DISCONNECT);

@@ -1,8 +1,8 @@
 cloudfs
 ====
-Cloudfs creates an object filesystem or block device on top of
+Cloudfs creates a virtual filesystem or block device on top of
 popular cloud storage services.  This filesystem can only be
-accessed with cloudfs only.  It also supports transparent encryption
+accessed with cloudfs.  It also supports transparent encryption
 and zlib compression. As of right now, I only have support
 for Amazon S3, but plan on adding others in the future.
 
@@ -24,18 +24,20 @@ Requirements
 
 
 
-Compiling
+Compiling and installing
 ----
-1. Run ./config.sh && make
+1. Run ./config.sh
 
-2. Copy bin/cloudfs to /usr/sbin/
+2. Run make
 
-3. Copy bin/cloudfs.conf to ~/.cloudfs.conf
+3. Run make install or copy bin/cloudfs to /usr/sbin/
 
-4. Edit ~/.cloudfs.conf
+4. Copy bin/cloudfs.conf to ~/.cloudfs.conf
+
+5. Edit ~/.cloudfs.conf
 
 
-Command-line options
+Command-line options for virtual filesystem
 ----
     Listing volumes:
     	cloudfs --list
@@ -48,8 +50,27 @@ Command-line options
 	
     Unmounting the volume:
     	cloudfs --volume [volume] --unmount [directory]
-    		or
-    	umount [directory]
+	
+    Deleting the volume:
+    	cloudfs --volume [volume] --delete
+
+
+Command-line options for block device
+----
+    Listing volumes:
+    	cloudfs --list
+	
+    Create a new volume:
+    	cloudfs --volume [volume] --format block --size [size i.e. 30G] --create
+	
+    Mounting the volume:
+    	cloudfs --volume [volume] --mount /dev/nbd0
+    	
+    Creating a ext3 filesystem:
+    	mkfs.ext3 /dev/nbd0
+	
+    Unmounting the volume:
+    	cloudfs --volume [volume] --unmount /dev/nbd0
 	
     Deleting the volume:
     	cloudfs --volume [volume] --delete
