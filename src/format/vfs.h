@@ -84,6 +84,12 @@ void vfs_mount(const struct volume_metadata *md, const char *path);
 void vfs_unmount(const struct volume_metadata *md, const char *path);
 
 ////////////////////////////////////////////////////////////////////////////////
+// Section:     Check filesystem
+
+void vfs_fsck(const struct volume_metadata *md);
+void vfs_fsck_dir(uint64_t inode);
+
+////////////////////////////////////////////////////////////////////////////////
 // Section:     Path parsing
 
 char **vfs_path_split(char *str);

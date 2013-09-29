@@ -37,6 +37,7 @@ static uint64_t vfs_fsid = 0;
 const struct volume_intr vfs_intr = {
 	.mount		= vfs_mount,
 	.unmount	= vfs_unmount,
+	.fsck		= vfs_fsck,
 };
 
 static struct fuse_operations vfs_oper = {
@@ -134,6 +135,38 @@ void vfs_unmount(const struct volume_metadata *md, const char *path) {
 		exit(0);
 	}
 	waitpid(pid, NULL, 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Section:     Check filesystem
+
+void vfs_fsck(const struct volume_metadata *md) {
+	object_load();
+
+	vfs_fsck_dir(0);
+	
+	object_unload();
+
+	notice("Filesystem is clean");
+}
+
+void vfs_fsck_dir(uint64_t inode) {
+	struct vfs_inode **list, **lptr;
+	
+	if (!(list = vfs_dir_read(inode, NULL)))
+		return;
+	
+	for (lptr = list; *lptr; lptr++) {
+		struct vfs_inode *node = *lptr;
+		
+		if (S_ISDIR(node->data.mode))
+			vfs_fsck_dir(node->data.ino);
+		else {
+			// TODO: Write me
+		}
+	}
+	
+	vfs_dir_read_free(list);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -501,7 +534,7 @@ vfs_fd_handle vfs_fd_create(struct vfs_inode *node) {
 	if (!(fd = calloc(sizeof(*fd), 1)))
 		stderror("calloc");
 	fd->fh = unique_id();
-	memcpy(&fd->node, node, sizeof(fd->node)); //TODO: Should consoladate nodes
+	memcpy(&fd->node, node, sizeof(fd->node)); //TODO: Should consolidate nodes
 	fd->prev = NULL;
 	fd->next = vfs_fd_list;
 	if (vfs_fd_list)

@@ -44,12 +44,12 @@ static const char *volume_selected = NULL;
 // Section:     Volume operations
 
 static const struct volume_oper volume_oper_list[] = {
-	{  "create", volume_create   },
-	{   "mount", volume_mount    },
-	{ "unmount", volume_unmount  },
-	{    "fsck", volume_fsck     },
-	{    "list", volume_list     },
-	{  "delete", volume_delete   },
+	{    "create", volume_create   },
+	{     "mount", volume_mount    },
+	{   "unmount", volume_unmount  },
+	{      "fsck", volume_fsck     },
+	{      "list", volume_list     },
+	{    "delete", volume_delete   },
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -149,7 +149,6 @@ void volume_create() {
 void volume_mount() {
 	struct volume_metadata *md;
 	const char *path;
-	char lock_name[VOLUME_METADATA_STRING_MAX];
 	
 	if (!volume_selected)
 		error("Volume must be specified using --volume");
@@ -158,39 +157,16 @@ void volume_mount() {
 	
 	volume_intr_load(&md);
 
-	if (!store_get_readonly()) {
-		volume_lock_string(lock_name);
-		switch (store_exists_object(bucket_get_selected(), lock_name)) {
-			case NOT_FOUND:
-				if (store_put_object(bucket_get_selected(), lock_name,
-						VOLUME_LOCK_DATA, strlen(VOLUME_LOCK_DATA)) != SUCCESS)
-					error("Unable to create lock for volume");
-				break;
-				
-			case SUCCESS:
-				if (config_get("force"))
-					break;
-				
-				warning("Volume \"%s\" is currently already in use, "
-						"or was not cleanly unmounted.",
-						volume_selected);
-				warning("Mounting the same bucket in multiple instances "
-						"will cause problems.");
-				error("If you would like to continue anyway, use --force");
-				
-			default:
-				error("Unable to query storage service");
-		}
-	}
+	volume_mutex_check();
+	if (!store_get_readonly())
+		volume_mutex_create();
 	
 	if (!volume_intr_ptr->mount)
 		error("Volume format does not support this operation");
 	volume_intr_ptr->mount(md, path);
 
-	if (!store_get_readonly()) {
-		if (store_delete_object(bucket_get_selected(), lock_name) != SUCCESS)
-			warning("Unable to delete lock");
-	}
+	if (!store_get_readonly())
+		volume_mutex_destroy();
 		
 	free(md);
 }
@@ -223,10 +199,15 @@ void volume_fsck() {
 	
 	volume_intr_load(&md);
 
+	volume_mutex_check();
+	volume_mutex_create();
+
 	if (!volume_intr_ptr->fsck)
 		error("Volume format does not support this operation");
 	volume_intr_ptr->fsck(md);
 	
+	volume_mutex_destroy();
+
 	free(md);
 }
 
@@ -243,10 +224,10 @@ void volume_list() {
 	
 	notice(VOLUME_LIST_FORMAT,
 			"Name", "Format", "Capacity",
-			"Creation Time", "Enc.");
+			"Creation Time", "Enc.", "Mounted");
 	notice(VOLUME_LIST_FORMAT,
 			"----", "------", "--------",
-			"-------------", "----");
+			"-------------", "----", "-------");
 	
 	prefix_len = strlen(VOLUME_METADATA_PREFIX);
 	found = false;
@@ -255,10 +236,12 @@ void volume_list() {
 		struct volume_metadata *md;
 		char *md_buf, *volume,
 			cap[VOLUME_CAP_STRING_MAX],
+			lock[VOLUME_LOCK_STRING_MAX],
 			time_str[1 << 9];
 		uint32_t md_len;
 		struct tm time_tm;
 		time_t time_offt;
+		bool mounted;
 		
 		if (strncmp(list->item[i], VOLUME_METADATA_PREFIX, prefix_len) != 0)
 			break;
@@ -274,7 +257,7 @@ void volume_list() {
 			warning("Metadata corrupted for volume %s", volume);
 			continue;
 		}
-		
+
 		md = (struct volume_metadata*) md_buf;
 		if (md->version > VOLUME_VERSION) {
 			warning("Volume %s was created for a newer version of cloudfs", volume);
@@ -285,7 +268,11 @@ void volume_list() {
 			warning("Volume %s has an invalid format", volume);
 			continue;
 		}
-		
+
+		snprintf(lock, sizeof(lock), VOLUME_LOCK_PREFIX "%s",
+			volume);
+		mounted = (store_exists_object(bucket_get_selected(), lock) == SUCCESS);
+
 		if ((volume_intr_ptr->flags & VOLUME_NEED_SIZE))
 			volume_size_to_str(md->capacity, cap, sizeof(cap));
 		else
@@ -297,7 +284,8 @@ void volume_list() {
 		
 		notice(VOLUME_LIST_FORMAT,
 				volume, md->format, cap, time_str, 
-				(md->flags & VOLUME_ENCRYPT) ? "On" : "Off");
+				(md->flags & VOLUME_ENCRYPT) ? "On" : "Off",
+				mounted ? "Yes" : "No");
 		found = true;
 		
 		free(md_buf);
@@ -347,6 +335,50 @@ void volume_delete() {
 		error("Unable to delete volume");
 	
 	notice("Volume \"%s\" has been deleted", volume_selected);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Section:     Volume mutex
+
+void volume_mutex_check() {
+	char lock_name[VOLUME_METADATA_STRING_MAX];
+	
+	volume_lock_string(lock_name);
+	switch (store_exists_object(bucket_get_selected(), lock_name)) {
+		case NOT_FOUND:
+			break;
+			
+		case SUCCESS:
+			if (config_get("force"))
+				break;
+			
+			warning("Volume \"%s\" is currently already in use, "
+					"or was not cleanly unmounted.",
+					volume_selected);
+			warning("Mounting the same bucket in multiple instances "
+					"will cause problems.");
+			error("If you would like to continue anyway, use --force");
+			
+		default:
+			error("Unable to query storage service");
+	}
+}
+
+void volume_mutex_create() {
+	char lock_name[VOLUME_METADATA_STRING_MAX];
+	
+	volume_lock_string(lock_name);
+	if (store_put_object(bucket_get_selected(), lock_name,
+			VOLUME_LOCK_DATA, strlen(VOLUME_LOCK_DATA)) != SUCCESS)
+		error("Unable to create lock for volume");
+}
+
+void volume_mutex_destroy() {
+	char lock_name[VOLUME_METADATA_STRING_MAX];
+	
+	volume_lock_string(lock_name);
+	if (store_delete_object(bucket_get_selected(), lock_name) != SUCCESS)
+		warning("Unable to delete lock");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

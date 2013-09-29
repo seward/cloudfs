@@ -35,7 +35,7 @@
 #define VOLUME_OBJECT_PREFIX		"cloudfs.object."
 #define VOLUME_OBJECT_STRING_MAX	(sizeof(VOLUME_OBJECT_PREFIX) + VOLUME_NAME_MAX + 35)
 
-#define VOLUME_LIST_FORMAT		"%-15s %-8s %-10s %-20s %-15s"
+#define VOLUME_LIST_FORMAT		"%-15s %-8s %-10s %-21s %-6s %-8s"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume object identifier
@@ -101,6 +101,13 @@ void volume_unmount();
 void volume_fsck();
 void volume_list();
 void volume_delete();
+
+////////////////////////////////////////////////////////////////////////////////
+// Section:     Volume mutex
+
+void volume_mutex_check();
+void volume_mutex_create();
+void volume_mutex_destroy();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume format

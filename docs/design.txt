@@ -4,7 +4,6 @@
 
 
 * Todo
-	- FSCK support
 	- Snapshot support
 	- Add disk cache support
 	- Add services
