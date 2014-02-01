@@ -5,6 +5,7 @@
  */
 
 #pragma once
+#ifdef HAVE_FUSE
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Required includes
@@ -41,7 +42,7 @@ struct vfs_inode_data {
 	char name[VFS_PATH_MAX];
 	uint64_t ino, last_block;
 	uint32_t flag;
-	
+
 	uint32_t mode, uid, gid;
 	uint64_t dev, rdev, nlink, size;
 	uint64_t atime, mtime, ctime;
@@ -99,7 +100,7 @@ void vfs_path_split_free(char **dst);
 // Section:     Directory operations
 
 struct vfs_inode **vfs_dir_read(uint64_t inode, struct vfs_inode_ptr *empty_ptr);
-bool vfs_dir_read_pass(struct vfs_inode_ptr *ptr, struct vfs_inode_ptr *save_ptr, 
+bool vfs_dir_read_pass(struct vfs_inode_ptr *ptr, struct vfs_inode_ptr *save_ptr,
 		void *data, uint32_t len);
 void vfs_dir_read_free(struct vfs_inode **list);
 
@@ -165,3 +166,5 @@ int vfs_fuse_flush(const char *path, struct fuse_file_info *fi);
 int vfs_fuse_release(const char *path, struct fuse_file_info *fi);
 int vfs_fuse_fsync(const char *path, int32_t isdatasync, struct fuse_file_info *fi);
 int vfs_fuse_statfs(const char *path, struct statvfs *stbuf);
+
+#endif

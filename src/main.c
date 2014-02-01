@@ -38,7 +38,7 @@ static struct option opt_field[] = {
 	{ "store",		1,	NULL,	OPT_NRML	},
 	{ "bucket",		1,	NULL,	OPT_NRML	},
 	{ "volume",		1,	NULL,	OPT_NRML	},
-	
+
 	{ "help",		0,	NULL,	OPT_HELP	},
 	{ "log",		1,	NULL,	OPT_LOG		},
 	{ "config",		1,	NULL,	OPT_CONFIG	},
@@ -47,15 +47,15 @@ static struct option opt_field[] = {
 	{ "readonly",		0,	NULL,	OPT_NRML	},
 	{ "nofork",		0,	NULL,	OPT_NRML	},
 	{ "force",		0,	NULL,	OPT_NRML	},
-	
+
 	{ "cache-type",		1,	NULL,	OPT_NRML	},
 	{ "cache-max",		1,	NULL,	OPT_NRML	},
-	
+
 	{ "create-bucket",	0,	NULL,	OPT_EXCL	},
 	{ "auto-create-bucket",	0,	NULL,	OPT_NRML	},
 	{ "list-buckets",	0,	NULL,	OPT_EXCL	},
 	{ "delete-bucket",	0,	NULL,	OPT_EXCL	},
-	
+
 	{ "create",		0,	NULL,	OPT_EXCL	},
 	{ "mount",		1,	NULL,	OPT_EXCL	},
 	{ "unmount",		1,	NULL,	OPT_EXCL	},
@@ -65,10 +65,10 @@ static struct option opt_field[] = {
 
 	{ "format",		1,	NULL,	OPT_NRML	},
 	{ "size",		1,	NULL,	OPT_NRML	},
-	
+
 	{ "amazon-key",		1,	NULL,	OPT_NRML	},
 	{ "amazon-secret",	1,	NULL,	OPT_NRML	},
-	
+
 	{ "dummy-path",		1,	NULL,	OPT_NRML	},
 	{ NULL,			0,	NULL,	0		}
 };
@@ -78,11 +78,11 @@ static struct option opt_field[] = {
 
 void usage() {
 	fprintf(stderr, "Usage: cloudfs [OPTIONS]...\n");
+	fprintf(stderr, "Author: Benjamin Kittridge, bysin@bysin.net\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Required Arguments:\n");
 	fprintf(stderr, "\t%-25s Storage service, must be one of:\n",	"--store [service]");
-	fprintf(stderr, "\t%-25s     amazon, dummy, google\n",		"");
-	fprintf(stderr, "\t%-25s     microsoft, rackspace\n",		"");
+	fprintf(stderr, "\t%-25s     dummy, amazon\n",			"");
 	fprintf(stderr, "\t%-25s Bucket\n",				"--bucket [name]");
 	fprintf(stderr, "\t%-25s Volume\n",				"--volume [name]");
 	fprintf(stderr, "\n");
@@ -98,7 +98,7 @@ void usage() {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Cache Arguments:\n");
 	fprintf(stderr, "\t%-25s Cache type, must be one of:\n",	"--cache-type [type]");
-	fprintf(stderr, "\t%-25s     memory, file, disk\n",		"");
+	fprintf(stderr, "\t%-25s     memory, file\n",			"");
 	fprintf(stderr, "\t%-25s Maximum size of cache\n",		"--cache-max [size]");
 	fprintf(stderr, "\t%-25s Path to store cache\n",		"--cache-path [path]");
 	fprintf(stderr, "\n");
@@ -127,7 +127,19 @@ void usage() {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Arguments for dummy storage:\n");
 	fprintf(stderr, "\t%-25s Path to storage directory\n",		"--dummy-path [path]");
-	fprintf(stderr, "\n");
+        fprintf(stderr, "\n");
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Setup:\n");
+        fprintf(stderr, "\t1) Copy ${BUILD_PATh}/bin/cloudfs.conf to ~/.cloudfs.conf\n");
+        fprintf(stderr, "\t2) Edit ~/.cloudfs.conf with required information\n");
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Example volume operations (assuming you followed the setup):\n");
+        fprintf(stderr, "\tListing:     cloudfs --list\n");
+        fprintf(stderr, "\tCreate:      cloudfs --volume [volume] --create\n");
+        fprintf(stderr, "\tMounting:    cloudfs --volume [volume] --mount [directory]\n");
+        fprintf(stderr, "\tUnmounting:  cloudfs --volume [volume] --unmount [directory]\n");
+        fprintf(stderr, "\tDeleting:    cloudfs --volume [volume] --delete\n");
+        fprintf(stderr, "\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -140,7 +152,7 @@ int main(int argc, char **argv) {
 
 	load_default = true;
 	exclusive = false;
-	
+
 	index = 0;
 	while (1) {
 		if ((ch = getopt_long_only(argc, argv, "", opt_field, &index)) < 0)
@@ -149,12 +161,12 @@ int main(int argc, char **argv) {
 			case OPT_LOG:
 				log_load(optarg);
 				break;
-				
+
 			case OPT_CONFIG:
 				config_load(optarg);
 				load_default = false;
 				break;
-				
+
 			case OPT_EXCL:
 				if (exclusive)
 					error("Cannot use --%s with --%s",
@@ -162,7 +174,7 @@ int main(int argc, char **argv) {
 							opt_field[excl_index].name);
 				exclusive = true;
 				excl_index = index;
-				
+
 			case OPT_NRML:
 				name = opt_field[index].name;
 				if (opt_field[index].has_arg)
@@ -177,12 +189,12 @@ int main(int argc, char **argv) {
 				return 1;
 		}
 	}
-	
+
 	if (load_default)
 		config_default();
-	
+
 	mt_init();
-	
+
 	store_load();
 	bucket_load();
 	crypt_load();

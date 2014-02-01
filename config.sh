@@ -112,6 +112,7 @@ if [ "${FUSE}" -eq 1 ]; then
 	fi
 	OLD_LDFLAGS="${LDFLAGS}"
 	LDFLAGS="${LDFLAGS} -lfuse"
+	CFLAGS="${CFLAGS} -DHAVE_FUSE"
 	XCFLAGS="-D_FILE_OFFSET_BITS=64"
 	
 	${CC} -x c - ${CFLAGS} ${LDFLAGS} ${XCFLAGS} -o /dev/null 2>/dev/null <<EOF
@@ -221,6 +222,5 @@ echo "# Automaticly generated, do not edit"  > config.mk
 echo "# Build: ${0} ${@}"                   >> config.mk
 echo "CONFIG = 1"                           >> config.mk
 echo "CC = ${CC}"                           >> config.mk
-echo "FUSE = ${FUSE}"                       >> config.mk
 echo "CFLAGS = ${CFLAGS}"                   >> config.mk
 echo "LDFLAGS = ${LDFLAGS}"                 >> config.mk

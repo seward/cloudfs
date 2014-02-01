@@ -35,13 +35,6 @@ COMPILE_ARG =	-g -iquote ${SRC_PATH} -Wimplicit -Werror -Wall -Wextra \
 INSTALL_PATH =	/usr/sbin
 
 ###################################################
-# Additional extensions
-
-ifeq ($(FUSE), 1)
-#SRC +=		${SRC_PATH}/infr/fuse.o
-endif
-
-###################################################
 # Build
 
 all: info build
