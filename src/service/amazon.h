@@ -38,7 +38,7 @@ struct amazon_request {
 
 	const char *req_data, *req_ptr;
 	uint32_t req_len, req_left;
-	
+
 	char *resp_data;
 	uint32_t resp_len;
 	long resp_code;

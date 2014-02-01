@@ -36,13 +36,13 @@ static bool store_readonly = false;
 void store_load() {
 	const char *intr;
 	const struct store_intr_opt *opt, *opt_end;
-	
+
 	if (!(intr = config_get("store")))
 		error("Storage service must be specified using --store");
-	
+
 	if (config_get("readonly"))
 		store_readonly = true;
-	
+
 	store_intr_ptr = NULL;
 	for (opt = store_intr_opt_list,
 	     opt_end = opt + sizearr(store_intr_opt_list);
@@ -53,10 +53,10 @@ void store_load() {
 			break;
 		}
 	}
-	
+
 	if (!store_intr_ptr)
 		error("Invalid storage service specified \"%s\"", intr);
-	
+
 	if (store_intr_ptr->load)
 		store_intr_ptr->load();
 }
@@ -123,7 +123,7 @@ int store_delete_object(const char *bucket, const char *object) {
 
 struct store_list *store_list_new() {
 	struct store_list *list;
-	
+
 	if (!(list = calloc(sizeof(*list), 1)))
 		stderror("calloc");
 	return list;
@@ -138,7 +138,7 @@ void store_list_push(struct store_list *list, const char *item) {
 
 void store_list_free(struct store_list *list) {
 	uint32_t i;
-	
+
 	for (i = 0; i < list->size; i++)
 		free(list->item[i]);
 	free(list);

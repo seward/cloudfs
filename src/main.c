@@ -127,19 +127,19 @@ void usage() {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Arguments for dummy storage:\n");
 	fprintf(stderr, "\t%-25s Path to storage directory\n",		"--dummy-path [path]");
-        fprintf(stderr, "\n");
-        fprintf(stderr, "\n");
-        fprintf(stderr, "Setup:\n");
-        fprintf(stderr, "\t1) Copy ${BUILD_PATh}/bin/cloudfs.conf to ~/.cloudfs.conf\n");
-        fprintf(stderr, "\t2) Edit ~/.cloudfs.conf with required information\n");
-        fprintf(stderr, "\n");
-        fprintf(stderr, "Example volume operations (assuming you followed the setup):\n");
-        fprintf(stderr, "\tListing:     cloudfs --list\n");
-        fprintf(stderr, "\tCreate:      cloudfs --volume [volume] --create\n");
-        fprintf(stderr, "\tMounting:    cloudfs --volume [volume] --mount [directory]\n");
-        fprintf(stderr, "\tUnmounting:  cloudfs --volume [volume] --unmount [directory]\n");
-        fprintf(stderr, "\tDeleting:    cloudfs --volume [volume] --delete\n");
-        fprintf(stderr, "\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Setup:\n");
+	fprintf(stderr, "\t1) Copy ${BUILD_PATh}/bin/cloudfs.conf to ~/.cloudfs.conf\n");
+	fprintf(stderr, "\t2) Edit ~/.cloudfs.conf with required information\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Example volume operations (assuming you followed the setup):\n");
+	fprintf(stderr, "\tListing:     cloudfs --list\n");
+	fprintf(stderr, "\tCreate:      cloudfs --volume [volume] --create\n");
+	fprintf(stderr, "\tMounting:    cloudfs --volume [volume] --mount [directory]\n");
+	fprintf(stderr, "\tUnmounting:  cloudfs --volume [volume] --unmount [directory]\n");
+	fprintf(stderr, "\tDeleting:    cloudfs --volume [volume] --delete\n");
+	fprintf(stderr, "\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

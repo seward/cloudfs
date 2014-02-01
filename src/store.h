@@ -32,13 +32,13 @@ struct store_list {
 struct store_intr {
 	void (*load)         (void);
 	void (*unload)       (void);
-	
+
 	int (*list_bucket)   (const char *prefix, uint32_t max_count,
 				struct store_list *list);
 	int (*create_bucket) (const char *bucket);
 	int (*exists_bucket) (const char *bucket);
 	int (*delete_bucket) (const char *bucket);
-	
+
 	int (*list_object)   (const char *bucket, const char *prefix,
 				uint32_t max_count, struct store_list *list);
 	int (*put_object)    (const char *bucket, const char *object,

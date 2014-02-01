@@ -37,7 +37,7 @@ static int32_t crypt_blocksize = 0;
 
 void crypt_load() {
 	const char *password;
-	
+
 	if (config_get("password-prompt"))
 		crypt_getpass();
 
@@ -50,10 +50,10 @@ void crypt_load() {
 		error("Cipher IV length does not match built-in length");
 	if (EVP_CIPHER_key_length(crypt_cipher) != CRYPT_KEY_SIZE)
 		error("Cipher KEY length does not match built-in length");
-	
+
 	EVP_BytesToKey(crypt_cipher, EVP_sha1(), NULL, (uint8_t*) password,
 			strlen(password), 8, crypt_cipher_key, NULL);
-	
+
 	crypt_blocksize = EVP_CIPHER_block_size(crypt_cipher);
 	crypt_cipher_enabled = true;
 }
@@ -69,28 +69,28 @@ void crypt_getpass() {
 	struct termios old_flags, flags;
 	char password[CRYPT_MAX_PASSWORD];
 	uint32_t len;
-	
+
 	if (tcgetattr(0, &old_flags) != 0)
 		stderror("tcgetattr");
-	
+
 	flags = old_flags;
 	flags.c_lflag &= ~ECHO;
 	flags.c_lflag |= ECHONL;
-	
+
 	if (tcsetattr(fileno(stdin), TCSANOW, &flags) != 0)
 		stderror("tcsetattr");
-	
+
 	printf("Password: ");
 	if (!fgets(password, sizeof(password), stdin))
 		error("No password specified, quitting");
-	
+
 	len = strlen(password);
 	while (len && isspace(password[len - 1]))
 		password[--len] = 0;
-	
+
 	if (tcsetattr(fileno(stdin), TCSANOW, &old_flags) != 0)
 		stderror("tcsetattr");
-	
+
 	config_set("password", password);
 }
 
@@ -100,11 +100,11 @@ void crypt_getpass() {
 void crypt_keycheck_set(char *keycheck, uint32_t size) {
 	char *buf;
 	uint32_t len, keysize;
-	
+
 	assert(size > (crypt_blocksize + CRYPT_IV_SIZE));
 	keysize = size - (crypt_blocksize + CRYPT_IV_SIZE);
 	memset(keycheck, CRYPT_KEYCHECK_MAGIC, keysize);
-	
+
 	if (!crypt_enc(keycheck, keysize, &buf, &len) || len > size)
 		error("Encryption for keycheck failed");
 	memcpy(keycheck, buf, len);
@@ -114,7 +114,7 @@ void crypt_keycheck_set(char *keycheck, uint32_t size) {
 bool crypt_keycheck_test(char *keycheck, uint32_t size) {
 	char *buf;
 	uint32_t len, i;
-	
+
 	if (!crypt_dec(keycheck, size, &buf, &len, true) || !len)
 		return false;
 	for (i = 0; i < len; i++) {
@@ -144,25 +144,25 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf, uint32_t *ou
 		warning("Encryption used without initialization");
 		return false;
 	}
-	
+
 	if (!RAND_bytes(iv, sizeof(iv))) {
 		warning("RAND_bytes failed");
 		return false;
 	}
 
 	EVP_CIPHER_CTX_init(&ctx);
-	
+
 	if (!EVP_EncryptInit_ex(&ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
 		warning("EVP_EncryptInit_ex failed");
 		EVP_CIPHER_CTX_cleanup(&ctx);
 		return false;
 	}
-	
+
 	if (!(out_rbuf = malloc(sizeof(iv) + in_len + crypt_blocksize)))
 		stderror("malloc");
 	memcpy(out_rbuf, iv, sizeof(iv));
 	out_rlen = sizeof(iv);
-	
+
 	if (!EVP_EncryptUpdate(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen,
 				     (uint8_t*) in_buf, in_len)) {
 		warning("EVP_EncryptUpdate failed");
@@ -171,7 +171,7 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf, uint32_t *ou
 		return false;
 	}
 	out_rlen += out_flen;
-	
+
 	if (!EVP_EncryptFinal_ex(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen)) {
 		warning("EVP_EncryptFinal_ex failed");
 		free(out_rbuf);
@@ -179,7 +179,7 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf, uint32_t *ou
 		return false;
 	}
 	out_rlen += out_flen;
-       
+
 	assert(out_rlen >= 0);
 	*out_buf = out_rbuf;
 	*out_len = out_rlen;
@@ -199,7 +199,7 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
 		warning("Encryption used without initialization");
 		return false;
 	}
-	
+
 	if (in_len < sizeof(iv)) {
 		warning("Buffer for decryption has invalid size");
 		return false;
@@ -207,9 +207,9 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
 	memcpy(iv, in_buf, sizeof(iv));
 	in_buf += sizeof(iv);
 	in_len -= sizeof(iv);
-	
+
 	EVP_CIPHER_CTX_init(&ctx);
-	
+
 	if (!EVP_DecryptInit_ex(&ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
 		if (!suppress_error)
 			warning("EVP_DecryptInit_ex failed");
@@ -220,7 +220,7 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
 	if (!(out_rbuf = malloc(in_len + crypt_blocksize)))
 		stderror("malloc");
 	out_rlen = 0;
-	
+
 	if (!EVP_DecryptUpdate(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen,
 				     (uint8_t*) in_buf, in_len)) {
 		if (!suppress_error)
@@ -230,7 +230,7 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
 		return false;
 	}
 	out_rlen += out_flen;
-	
+
 	if (!EVP_DecryptFinal_ex(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen)) {
 		if (!suppress_error)
 			warning("EVP_DecryptFinal_ex failed");
@@ -239,7 +239,7 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
 		return false;
 	}
 	out_rlen += out_flen;
-	
+
 	assert(out_rlen >= 0);
 	*out_buf = out_rbuf;
 	*out_len = out_rlen;

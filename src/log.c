@@ -39,7 +39,7 @@ void log_load(char *fname) {
 	if (!(log_file = fopen(fname, "ae")))
 		error("Failed to open log file \"%s\"", fname);
 	fcntl(fileno(log_file), F_SETFD, FD_CLOEXEC);
-	
+
 	sem_init(&log_lock, 0, 1);
 	log_has_lock = true;
 }
@@ -53,7 +53,7 @@ void log_write(char *str, ...) {
 	bool first, timestamp;
 	time_t t;
 	struct tm tm;
-	
+
 	va_start(args, str);
 	if (vasprintf(&buf, str, args) < 0 || !buf)
 		stderror("vasprintf");
@@ -61,7 +61,7 @@ void log_write(char *str, ...) {
 
 	if (!log_file)
 		log_file = stderr;
-	
+
 	if (isatty(fileno(log_file)))
 		timestamp = false;
 	else
@@ -69,12 +69,12 @@ void log_write(char *str, ...) {
 
 	if (log_has_lock)
 		sem_wait(&log_lock);
-	
+
 	if (timestamp) {
 		t = time(NULL);
 		localtime_r(&t, &tm);
 		strftime(time_str, sizeof(time_str), "%F %T", &tm);
-		
+
 		ptr = NULL;
 		for (first = true, tok = strtok_r(buf, "\n", &ptr);
 				tok; tok = strtok_r(NULL, "\n", &ptr), first = false)
@@ -85,7 +85,7 @@ void log_write(char *str, ...) {
 		fputs("\n", log_file);
 	}
 	fflush(log_file);
-	
+
 	if (log_has_lock)
 		sem_post(&log_lock);
 

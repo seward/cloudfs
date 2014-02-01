@@ -23,21 +23,21 @@ bool pack_compress(const char *in_buf, uint32_t in_len, char **out_buf, uint32_t
 	struct pack_header *hdr;
 	char *sbuf, *rbuf;
 	uLongf rlen;
-	
+
 	if (!(sbuf = malloc(sizeof(*hdr) + in_len)))
 		stderror("malloc");
-	
+
 	hdr = (struct pack_header*) sbuf;
 	hdr->flag = 0;
 	hdr->orig_len = in_len;
-	
+
 	rbuf = sbuf + sizeof(*hdr);
 	rlen = in_len;
 	if (compress((Bytef*) rbuf, &rlen, (const Bytef*) in_buf, in_len) == Z_OK)
 		hdr->flag |= PACK_FLAG_COMPRESSED;
 	else
 		memcpy(rbuf, in_buf, rlen);
-	
+
 	*out_buf = sbuf;
 	*out_len = sizeof(*hdr) + rlen;
 	return true;
@@ -61,12 +61,12 @@ bool pack_uncompress(const char *in_buf, uint32_t in_len, char **out_buf, uint32
 		if (!(rbuf = malloc(rlen)))
 			stderror("malloc");
 		memcpy(rbuf, in_buf, rlen);
-		
+
 		*out_buf = rbuf;
 		*out_len = rlen;
 		return true;
 	}
-	
+
 	rlen = hdr->orig_len;
 	if (!(rbuf = malloc(rlen))) {
 		warning("Decompression alocation failed, likely invalid length");
@@ -78,7 +78,7 @@ bool pack_uncompress(const char *in_buf, uint32_t in_len, char **out_buf, uint32
 		warning("Decompression failed");
 		return false;
 	}
-	
+
 	*out_buf = rbuf;
 	*out_len = rlen;
 	return true;

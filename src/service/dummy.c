@@ -25,12 +25,12 @@
 
 const struct store_intr dummy_intr = {
 	.load		= dummy_load,
-	
+
 	.list_bucket	= dummy_list_bucket,
 	.create_bucket	= dummy_create_bucket,
 	.exists_bucket	= dummy_exists_bucket,
 	.delete_bucket	= dummy_delete_bucket,
-	
+
 	.list_object	= dummy_list_object,
 	.put_object	= dummy_put_object,
 	.get_object	= dummy_get_object,
@@ -59,14 +59,14 @@ int dummy_list_bucket(const char *prefix, uint32_t max_count,
 	DIR *dir;
 	struct dirent *ent;
 	uint32_t count;
-	
+
 	if (!(dir = opendir(dummy_path))) {
 		if (errno == ENOENT)
 			return NOT_FOUND;
 		stdwarning("opendir");
 		return SYS_ERROR;
 	}
-	
+
 	count = 0;
 	while (count < max_count && (ent = readdir(dir))) {
 		if (ent->d_type != DT_DIR)
@@ -78,21 +78,21 @@ int dummy_list_bucket(const char *prefix, uint32_t max_count,
 		store_list_push(list, ent->d_name);
 		count++;
 	}
-	
+
 	closedir(dir);
 	return SUCCESS;
 }
 
 int dummy_create_bucket(const char *bucket) {
 	char fname[DUMMY_MAX_PATH];
-	
+
 	assert(bucket != NULL);
-	
+
 	if (strchr(bucket, '/')) {
 		warning("Bucket contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s", dummy_path, bucket);
 	if (mkdir(fname, DUMMY_DIR_PERM) < 0) {
 		if (errno == EEXIST)
@@ -106,14 +106,14 @@ int dummy_create_bucket(const char *bucket) {
 int dummy_exists_bucket(const char *bucket) {
 	char fname[DUMMY_MAX_PATH];
 	struct stat st;
-	
+
 	assert(bucket != NULL);
-	
+
 	if (strchr(bucket, '/')) {
 		warning("Bucket contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s", dummy_path, bucket);
 	if (stat(fname, &st) < 0) {
 		if (errno == ENOENT)
@@ -126,14 +126,14 @@ int dummy_exists_bucket(const char *bucket) {
 
 int dummy_delete_bucket(const char *bucket) {
 	char fname[DUMMY_MAX_PATH];
-	
+
 	assert(bucket != NULL);
-	
+
 	if (strchr(bucket, '/')) {
 		warning("Bucket contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s", dummy_path, bucket);
 	if (rmdir(fname) < 0) {
 		if (errno == ENOENT)
@@ -153,14 +153,14 @@ int dummy_list_object(const char *bucket, const char *prefix,
 	DIR *dir;
 	struct dirent *ent;
 	uint32_t count;
-	
+
 	assert(bucket != NULL);
-	
+
 	if (strchr(bucket, '/')) {
 		warning("Bucket contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s", dummy_path, bucket);
 	if (!(dir = opendir(fname))) {
 		if (errno == ENOENT)
@@ -168,7 +168,7 @@ int dummy_list_object(const char *bucket, const char *prefix,
 		stdwarning("opendir");
 		return SYS_ERROR;
 	}
-	
+
 	count = 0;
 	while (count < max_count && (ent = readdir(dir))) {
 		if (ent->d_type != DT_REG)
@@ -178,7 +178,7 @@ int dummy_list_object(const char *bucket, const char *prefix,
 		store_list_push(list, ent->d_name);
 		count++;
 	}
-	
+
 	closedir(dir);
 	return SUCCESS;
 }
@@ -190,12 +190,12 @@ int dummy_put_object(const char *bucket, const char *object,
 	size_t ret;
 
 	assert(bucket != NULL && object != NULL);
-	
+
 	if (strchr(bucket, '/') || strchr(object, '/')) {
 		warning("Bucket or object contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s/%s", dummy_path, bucket, object);
 	if (!(file = fopen(fname, "w"))) {
 		if (errno == ENOENT)
@@ -203,10 +203,10 @@ int dummy_put_object(const char *bucket, const char *object,
 		stdwarning("fopen");
 		return SYS_ERROR;
 	}
-	
+
 	ret = fwrite(buf, len, 1, file);
 	fclose(file);
-	
+
 	if (!ret) {
 		stdwarning("fwrite");
 		return SYS_ERROR;
@@ -223,12 +223,12 @@ int dummy_get_object(const char *bucket, const char *object,
 	size_t sbuf_len;
 
 	assert(bucket != NULL && object != NULL);
-	
+
 	if (strchr(bucket, '/') || strchr(object, '/')) {
 		warning("Bucket or object contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s/%s", dummy_path, bucket, object);
 	if (!(file = fopen(fname, "r"))) {
 		if (errno == ENOENT)
@@ -236,7 +236,7 @@ int dummy_get_object(const char *bucket, const char *object,
 		stdwarning("fopen");
 		return SYS_ERROR;
 	}
-	
+
 	data = NULL;
 	data_len = 0;
 	while (1) {
@@ -258,14 +258,14 @@ int dummy_get_object(const char *bucket, const char *object,
 int dummy_exists_object(const char *bucket, const char *object) {
 	char fname[DUMMY_MAX_PATH];
 	struct stat st;
-	
+
 	assert(bucket != NULL && object != NULL);
-	
+
 	if (strchr(bucket, '/') || strchr(object, '/')) {
 		warning("Bucket or object contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s/%s", dummy_path, bucket, object);
 	if (stat(fname, &st) < 0) {
 		if (errno == ENOENT)
@@ -278,14 +278,14 @@ int dummy_exists_object(const char *bucket, const char *object) {
 
 int dummy_delete_object(const char *bucket, const char *object) {
 	char fname[DUMMY_MAX_PATH];
-	
+
 	assert(bucket != NULL && object != NULL);
-	
+
 	if (strchr(bucket, '/') || strchr(object, '/')) {
 		warning("Bucket or object contains invalid '/' character");
 		return USER_ERROR;
 	}
-	
+
 	snprintf(fname, sizeof(fname), "%s/%s/%s", dummy_path, bucket, object);
 	if (unlink(fname) < 0) {
 		if (errno == ENOENT)

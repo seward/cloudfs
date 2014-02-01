@@ -4,7 +4,7 @@
 
 
 * Todo
-	- Write an include better backup script
+	- Write and include better backup script
 	- FSCK support for vfs
 	- Snapshot support
 	- Add disk cache support

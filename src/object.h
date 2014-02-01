@@ -60,7 +60,7 @@ struct object_cache {
 struct object_cache_intr {
 	void (*load)   ();
 	void (*unload) ();
-	
+
 	uint64_t (*get_max)      ();
 	uint64_t (*get_capacity) ();
 

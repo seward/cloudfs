@@ -23,7 +23,7 @@
 void trxlog_add(struct trxlog *t, uint32_t from, uint32_t len) {
 	struct trxlog_range *r1, *r2;
 	uint32_t to, i, j, s;
-	
+
 	to = from + len;
 
 	for (i = 0; i < t->size; i++) {
@@ -55,13 +55,13 @@ void trxlog_add(struct trxlog *t, uint32_t from, uint32_t len) {
 		if (r1->from > from)
 			break;
 	}
-	
+
 	if (t->size + 1 > t->alloc_size) {
 		t->alloc_size += TRXLOG_STEP;
 		if (!(t->range = realloc(t->range, sizeof(*t->range) * t->alloc_size)))
 			stderror("realloc");
 	}
-	
+
 	for (j = t->size - 1; t->size && j >= i; j--) {
 		r1 = &t->range[j + 1];
 		r2 = &t->range[j];
@@ -70,7 +70,7 @@ void trxlog_add(struct trxlog *t, uint32_t from, uint32_t len) {
 		if (!j)
 			break;
 	}
-	
+
 	r1 = &t->range[i];
 	r1->from = from;
 	r1->to   = to;
@@ -80,7 +80,7 @@ void trxlog_add(struct trxlog *t, uint32_t from, uint32_t len) {
 bool trxlog_match(struct trxlog *t, uint32_t from, uint32_t len) {
 	struct trxlog_range *r;
 	uint32_t to, i;
-	
+
 	to = from + len;
 
 	for (i = 0; i < t->size; i++) {
@@ -96,7 +96,7 @@ bool trxlog_match(struct trxlog *t, uint32_t from, uint32_t len) {
 void trxlog_list(struct trxlog *t, uint32_t from, uint32_t to, uint32_t *len, bool *mark) {
 	struct trxlog_range *r;
 	uint32_t i;
-	
+
 	for (i = 0; i < t->size; i++) {
 		r = &t->range[i];
 		if (r->from <= from && r->to > from) {
@@ -110,7 +110,7 @@ void trxlog_list(struct trxlog *t, uint32_t from, uint32_t to, uint32_t *len, bo
 			return;
 		}
 	}
-	
+
 	*len  = to - from;
 	*mark = false;
 }

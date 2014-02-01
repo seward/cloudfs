@@ -69,7 +69,7 @@ struct volume_intr {
 	void (*mount)   (const struct volume_metadata *, const char *);
 	void (*unmount) (const struct volume_metadata *, const char *);
 	void (*fsck)    (const struct volume_metadata *);
-	
+
 	uint32_t flags;
 };
 
