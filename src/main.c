@@ -27,6 +27,7 @@
 // Section:     Options
 
 enum opt_value {
+	OPT_VERSION,
 	OPT_HELP,
 	OPT_LOG,
 	OPT_CONFIG,
@@ -39,7 +40,8 @@ static struct option opt_field[] = {
 	{ "bucket",		1,	NULL,	OPT_NRML	},
 	{ "volume",		1,	NULL,	OPT_NRML	},
 
-	{ "help",		0,	NULL,	OPT_HELP	},
+	{ "version",            0,      NULL,   OPT_VERSION     },
+	{ "help",               0,      NULL,   OPT_HELP        },
 	{ "log",		1,	NULL,	OPT_LOG		},
 	{ "config",		1,	NULL,	OPT_CONFIG	},
 	{ "password",		1,	NULL,	OPT_NRML	},
@@ -76,10 +78,14 @@ static struct option opt_field[] = {
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Help
 
-void usage() {
-        fprintf(stderr, "cloudfs v"VERSION" built on "__DATE__" "__TIME__"\n");
+void version() {
+	fprintf(stderr, "cloudfs v"VERSION" built on "__DATE__" "__TIME__"\n");
 	fprintf(stderr, "Author: Benjamin Kittridge, bysin@bysin.net\n");
-        fprintf(stderr, "Usage: cloudfs [OPTIONS]...\n");
+}
+
+void usage() {
+	version();
+	fprintf(stderr, "Usage: cloudfs [OPTIONS]...\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Required Arguments:\n");
 	fprintf(stderr, "\t%-25s Storage service, must be one of:\n",	"--store [service]");
@@ -183,6 +189,10 @@ int main(int argc, char **argv) {
 				else
 					config_set(name, "true");
 				break;
+
+			case OPT_VERSION:
+				version();
+				return 1;
 
 			case OPT_HELP:
 			default:

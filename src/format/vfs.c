@@ -95,8 +95,8 @@ static struct fuse_operations vfs_oper = {
 // Section:     Helper function
 
 static uint64_t unique_id() {
-        return (((uint64_t) (time(NULL) & 0xffffffff)) << 32) |
-        		(mt_rand() & 0xffffffff);
+	return (((uint64_t) (time(NULL) & 0xffffffff)) << 32) |
+			(mt_rand() & 0xffffffff);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -328,9 +328,9 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node, bool new_file
 		strcpy(res_node->data.name, "/");
 		res_node->data.mode = S_IFDIR | 0755;
 		res_node->data.nlink = 2;
-	        res_node->data.ctime = res_node->data.mtime =
-	        	res_node->data.atime = time(NULL);
-	        res_node->is_root = true;
+		res_node->data.ctime = res_node->data.mtime =
+			res_node->data.atime = time(NULL);
+		res_node->is_root = true;
 	}
 	else {
 		for (pptr = path_list; *pptr; pptr++) {
@@ -733,7 +733,7 @@ int vfs_fuse_mknod(const char *path, mode_t mode, dev_t rdev) {
 	node->data.rdev = rdev;
 	node->data.uid  = ctx->uid;
 	node->data.gid  = ctx->gid;
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_mkdir(const char *path, mode_t mode) {
@@ -752,7 +752,7 @@ int vfs_fuse_mkdir(const char *path, mode_t mode) {
 	node->data.mode = normalize_mode(mode, S_IFDIR, true);
 	node->data.uid  = ctx->uid;
 	node->data.gid  = ctx->gid;
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -789,7 +789,7 @@ int vfs_fuse_unlink(const char *path) {
 		vfs_node_free(node);
 		return ret;
 	}
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_rmdir(const char *path) {
@@ -889,7 +889,7 @@ int vfs_fuse_chmod(const char *path, mode_t mode) {
 		return ret;
 
 	node->data.mode = normalize_mode(mode, S_IFREG, false);
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_chown(const char *path, uid_t uid, gid_t gid) {
@@ -903,7 +903,7 @@ int vfs_fuse_chown(const char *path, uid_t uid, gid_t gid) {
 
 	node->data.uid = uid;
 	node->data.gid = gid;
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_truncate(const char *path, off_t size) {
@@ -920,7 +920,7 @@ int vfs_fuse_truncate(const char *path, off_t size) {
 
 	node->data.size  = size;
 	node->data.mtime = time(NULL);
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_ftruncate(const char *path, off_t size, struct fuse_file_info *fi) {
@@ -950,7 +950,7 @@ int vfs_fuse_utime(const char *path, struct utimbuf *buf) {
 
 	node->data.atime = buf->actime;
 	node->data.mtime = buf->modtime;
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_utimens(const char *path, const struct timespec ts[2]) {
@@ -964,7 +964,7 @@ int vfs_fuse_utimens(const char *path, const struct timespec ts[2]) {
 
 	node->data.atime = ts[0].tv_sec;
 	node->data.mtime = ts[1].tv_sec;
-        return vfs_node_commit_and_free(node);
+	return vfs_node_commit_and_free(node);
 }
 
 int vfs_fuse_open(const char *path, struct fuse_file_info *fi) {
