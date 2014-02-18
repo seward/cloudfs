@@ -15,7 +15,8 @@ import fcntl
 ########################################################################
 # Configuration - PLEASE EDIT
 
-# Path to write the log file.
+# Path to write the log file. This file will contain log information
+# about what files are being backed up.
 LOG_FILE = "/path/to/backup.log"
 
 # Path to the cloudfs binary.
@@ -25,12 +26,15 @@ CLOUDFS_PATH = "/usr/sbin/cloudfs"
 CONFIG_FILE = "/path/to/.cloudfs.conf"
 
 # Path to the directory used for mounted cloudfs backups.
+# This is not the directory you are backing up, but rather the
+# directory to mount the backup to. e.g. /mnt/backup
 BACKUP_DIR = "/path/to/temp/directory"
 
-# Hours to wait between backups
+# Hours to wait between backups.
 HOUR_WAIT = 48
 
-# Call the backup function for each volume -> directory pair.
+# Array of dicts containing information about backups. Each dict
+# should have atleast a 'volume' and 'path' key.
 BACKUPS = [
 	{
 		'volume': 'example1',
@@ -153,6 +157,7 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 	while rsync.returncode is None:
 		pollout([cloudfs, rsync])
 		if cloudfs.returncode is not None:
+			rsync.kill()
 			log("Error, cloudfs unexpectedly terminated")
 			return
 
