@@ -77,8 +77,9 @@ static struct option opt_field[] = {
 // Section:     Help
 
 void usage() {
-	fprintf(stderr, "Usage: cloudfs [OPTIONS]...\n");
+        fprintf(stderr, "cloudfs v"VERSION" built on "__DATE__" "__TIME__"\n");
 	fprintf(stderr, "Author: Benjamin Kittridge, bysin@bysin.net\n");
+        fprintf(stderr, "Usage: cloudfs [OPTIONS]...\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Required Arguments:\n");
 	fprintf(stderr, "\t%-25s Storage service, must be one of:\n",	"--store [service]");
@@ -130,7 +131,7 @@ void usage() {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Setup:\n");
-	fprintf(stderr, "\t1) Copy ${BUILD_PATh}/bin/cloudfs.conf to ~/.cloudfs.conf\n");
+	fprintf(stderr, "\t1) Copy ${BUILD_PATH}/bin/cloudfs.conf to ~/.cloudfs.conf\n");
 	fprintf(stderr, "\t2) Edit ~/.cloudfs.conf with required information\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example volume operations (assuming you followed the setup):\n");

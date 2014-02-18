@@ -16,7 +16,7 @@ endif
 # Options
 
 NAME =		cloudfs
-VERSION =	0.2
+VERSION =	0.3
 
 BIN_PATH =	bin
 BIN =		cloudfs
@@ -30,7 +30,8 @@ LINK_ARG =	-lpthread ${LDFLAGS}
 COMPILE_ARG =	-g -iquote ${SRC_PATH} -Wimplicit -Werror -Wall -Wextra \
 		-Wno-unused-result -Wno-missing-field-initializers \
 		-Wno-unused-parameter -Wno-sign-compare --std=gnu99 \
-		-D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 ${CFLAGS}
+		-D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DVERSION=\"${VERSION}\" \
+		${CFLAGS}
 
 INSTALL_PATH =	/usr/sbin
 
