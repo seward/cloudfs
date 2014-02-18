@@ -3,14 +3,26 @@
 # cloudfs: Script for backing up files at regular intervals to cloudfs
 #	By Benjamin Kittridge. Copyright (C) 2014, All rights reserved.
 #
+# * How to use
+#	- Fill out the configuration section below.
+#	- Run backup.py, it will run in the background continuously
+#	  until it is killed.
+#	- Adding backup.py to your startup script would be a good idea.
+# * Known issues
+#	- Do not run this script more than once at a time! Make sure you
+#	  kill the previous running instance (it responds to SIGTERM)
+#	  before running a new one.
+#
 
 import datetime
+import fcntl
 import os
+import signal
 import string
 import subprocess
+import sys
 import time
 import types
-import fcntl
 
 ########################################################################
 # Configuration - PLEASE EDIT
@@ -107,6 +119,9 @@ def pollout(pids, timeout=5):
 					break
 		time.sleep(1)
 
+rsync = None
+cloudfs = None
+
 def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 	if disabled:
 		return
@@ -119,6 +134,31 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 	except os.error:
 		pass
 
+	# Call rsync on source to backup directory.
+	options = []
+	if one_file_system:
+		options.append("--one-file-system")
+	if exclude:
+		if type(exclude) is types.StringType:
+			options.append("--exclude")
+			options.append(exclude)
+		elif type(exclude) is types.ListType:
+			for e in exclude:
+				options.append("--exclude")
+				options.append(e)
+		else:
+			log("Invalid type for exclude")
+			return;
+
+	paths = []
+	if type(path) is types.StringType:
+		paths.append(path)
+	elif type(path) is types.ListType:
+		paths += path
+	else:
+		log("Invalid type for path")
+		return;
+
 	# Make sure backup directory is unmounted before mounting.
 	unmount()
 	while ismounted():
@@ -126,6 +166,7 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 		time.sleep(5)
 
 	# Call cloudfs to mount volume.
+	global cloudfs  # Variable made global for signal handler
 	cloudfs = uexec([CLOUDFS_PATH, "--config", CONFIG_FILE, "--force",
 			"--nofork", "--volume", volume, "--mount", BACKUP_DIR])
 
@@ -137,39 +178,15 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 			return
 		log("Waiting for %s to mount" % BACKUP_DIR)
 
-	# Call rsync on source to backup directory.
-        options = []
-        if one_file_system:
-                options.append("--one-file-system")
-        if exclude:
-                if type(exclude) is types.StringType:
-                        options.append("--exclude")
-                        options.append(exclude)
-                elif type(exclude) is types.ListType:
-                        for e in exclude:
-                                options.append("--exclude")
-                                options.append(e)
-                else:
-                        log("Invalid type for exclude")
-                        unmount()
-                        return;
-
-        paths = []
-        if type(path) is types.StringType:
-                paths.append(path)
-        elif type(path) is types.ListType:
-                paths += path
-        else:
-                log("Invalid type for path")
-                unmount()
-                return;
-
-        rsync = uexec(["rsync", "--delete", "--inplace", "--whole-file",
-                        "-avp"] + options + paths + [BACKUP_DIR])
+	# Call rsync.
+	global rsync
+	rsync = uexec(["rsync", "--delete", "--inplace", "--whole-file",
+			"-avp"] + options + paths + [BACKUP_DIR])
 	while rsync.returncode is None:
 		pollout([cloudfs, rsync])
 		if cloudfs.returncode is not None:
-			rsync.kill()
+			rsync.terminate()
+			rsync.wait()
 			log("Error, cloudfs unexpectedly terminated")
 			return
 
@@ -177,10 +194,28 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 	unmount()
 	cloudfs.wait()
 
-while True:
-	log("Backup started")
-	for entry in BACKUPS:
-		backup(**entry)
-	log("Backup finished")
-	time.sleep(60 * 60 * HOUR_WAIT)
+	cloudfs = None
+	rsync = None
 
+def graceful_exit(signum, frame):
+	log("Caught signal %d, exiting" % signum)
+	if rsync:
+		rsync.terminate()
+		rsync.wait()
+	if cloudfs:
+		unmount()
+		cloudfs.wait()
+	sys.exit(0)
+
+def run():
+	signal.signal(signal.SIGHUP,  graceful_exit)
+	signal.signal(signal.SIGTERM, graceful_exit)
+	signal.signal(signal.SIGQUIT, graceful_exit)
+	while True:
+		log("Backup started")
+		for entry in BACKUPS:
+			backup(**entry)
+		log("Backup finished")
+		time.sleep(60 * 60 * HOUR_WAIT)
+
+run()
