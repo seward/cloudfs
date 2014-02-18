@@ -138,22 +138,34 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 		log("Waiting for %s to mount" % BACKUP_DIR)
 
 	# Call rsync on source to backup directory.
-	options = []
-	if one_file_system:
-		options.append("--one-file-system")
-	if exclude:
-		if type(exclude) is types.StringType:
-			options.append("--exclude")
-			options.append(exclude)
-		elif type(exclude) is types.ListType:
-			for e in exclude:
-				options.append("--exclude")
-				options.append(e)
-		else:
-			log("Invalid type for variable exclude, will continue anyway")
+        options = []
+        if one_file_system:
+                options.append("--one-file-system")
+        if exclude:
+                if type(exclude) is types.StringType:
+                        options.append("--exclude")
+                        options.append(exclude)
+                elif type(exclude) is types.ListType:
+                        for e in exclude:
+                                options.append("--exclude")
+                                options.append(e)
+                else:
+                        log("Invalid type for exclude")
+                        unmount()
+                        return;
 
-	rsync = uexec(["rsync", "--delete", "--inplace", "--whole-file",
-			"-avp"] + options + [path, BACKUP_DIR])
+        paths = []
+        if type(path) is types.StringType:
+                paths.append(path)
+        elif type(path) is types.ListType:
+                paths += path
+        else:
+                log("Invalid type for path")
+                unmount()
+                return;
+
+        rsync = uexec(["rsync", "--delete", "--inplace", "--whole-file",
+                        "-avp"] + options + paths + [BACKUP_DIR])
 	while rsync.returncode is None:
 		pollout([cloudfs, rsync])
 		if cloudfs.returncode is not None:
