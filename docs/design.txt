@@ -8,7 +8,4 @@
 	- FSCK support for vfs
 	- Snapshot support
 	- Add disk cache support
-	- Add services
-		- Google Cloud Storage
-		- Microsoft Azure
-		- Rackspace Store
+	- Add Google Cloud Storage
