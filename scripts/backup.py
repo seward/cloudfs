@@ -134,6 +134,11 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 	except os.error:
 		pass
 
+	# And the volume.
+	create_volume = uexec([CLOUDFS_PATH, "--config", CONFIG_FILE,
+				"--create", "--volume", volume])
+	create_volume.communicate()
+
 	# Call rsync on source to backup directory.
 	options = []
 	if one_file_system:
