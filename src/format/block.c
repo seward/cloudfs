@@ -304,11 +304,13 @@ void block_nbd_process() {
 
 			if (!block_nbd_write(&repl, sizeof(repl))) {
 				warning("An error occured while writing to nbd");
+				free(data);
 				break;
 			}
 			if (ret == 0 && type == NBD_CMD_READ) {
 				if (!block_nbd_write(data, data_len)) {
 					warning("An error occured while writing to nbd");
+					free(data);
 					break;
 				}
 			}

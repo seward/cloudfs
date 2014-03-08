@@ -606,7 +606,6 @@ void object_cache_thread(void *__unused) {
 	bool want_post, queue_empty;
 
 	interval = 0;
-	want_post = false;
 	queue_empty = false;
 	while (object_cache_thread_running || !queue_empty) {
 		clock_gettime(CLOCK_REALTIME, &tm);

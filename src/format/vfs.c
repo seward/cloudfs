@@ -323,14 +323,15 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node, bool new_file
 	parent_inode = 0;
 	if (!path_list[0]) {
 		if (new_file)
-			return -EEXIST;
-
-		strcpy(res_node->data.name, "/");
-		res_node->data.mode = S_IFDIR | 0755;
-		res_node->data.nlink = 2;
-		res_node->data.ctime = res_node->data.mtime =
-			res_node->data.atime = time(NULL);
-		res_node->is_root = true;
+			ret = -EEXIST;
+		else {
+			strcpy(res_node->data.name, "/");
+			res_node->data.mode = S_IFDIR | 0755;
+			res_node->data.nlink = 2;
+			res_node->data.ctime = res_node->data.mtime =
+				res_node->data.atime = time(NULL);
+			res_node->is_root = true;
+		}
 	}
 	else {
 		for (pptr = path_list; *pptr; pptr++) {
@@ -341,7 +342,6 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node, bool new_file
 				warning("File system missing data at inode %016" PRIx64,
 						parent_inode);
 				ret = -EFAULT;
-				found = false;
 				break;
 			}
 
@@ -822,7 +822,7 @@ int vfs_fuse_rmdir(const char *path) {
 
 	vfs_dir_read_free(list);
 	vfs_node_free(node);
-	return 0;
+	return ret;
 }
 
 int vfs_fuse_symlink(const char *from, const char *to) {
