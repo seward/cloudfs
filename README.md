@@ -40,40 +40,40 @@ Compiling and installing
 Command-line options for virtual filesystem
 ----
     Listing volumes:
-    	cloudfs --list
-	
+        cloudfs --list
+    
     Create a new volume:
-    	cloudfs --volume [volume] --create
-	
+        cloudfs --volume [volume] --create
+    
     Mounting the volume:
-    	cloudfs --volume [volume] --mount [directory]
-	
+        cloudfs --volume [volume] --mount [directory]
+    
     Unmounting the volume:
-    	cloudfs --volume [volume] --unmount [directory]
-	
+        cloudfs --volume [volume] --unmount [directory]
+    
     Deleting the volume:
-    	cloudfs --volume [volume] --delete
+        cloudfs --volume [volume] --delete
 
 
 Command-line options for block device
 ----
     Listing volumes:
-    	cloudfs --list
-	
+        cloudfs --list
+    
     Create a new volume:
-    	cloudfs --volume [volume] --format block --size [size i.e. 30G] --create
-	
+        cloudfs --volume [volume] --format block --size [size i.e. 30G] --create
+    
     Mounting the volume:
-    	cloudfs --volume [volume] --mount /dev/nbd0
-    	
+        cloudfs --volume [volume] --mount /dev/nbd0
+        
     Creating a ext3 filesystem:
-    	mkfs.ext3 /dev/nbd0
-	
+        mkfs.ext3 /dev/nbd0
+    
     Unmounting the volume:
-    	cloudfs --volume [volume] --unmount /dev/nbd0
-	
+        cloudfs --volume [volume] --unmount /dev/nbd0
+    
     Deleting the volume:
-    	cloudfs --volume [volume] --delete
+        cloudfs --volume [volume] --delete
 
 
 Tips and tricks

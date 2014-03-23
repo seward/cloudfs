@@ -1,6 +1,6 @@
 /*
  * cloudfs: config header
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  */
 
@@ -14,17 +14,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Macros
 
-#define CONFIG_MAX_LINE		(1 << 9)
+#define CONFIG_MAX_LINE       (1 << 9)
 
-#define CONFIG_DEFAULT_FILE	"cloudfs.conf"
-#define CONFIG_DEFAULT_GROUP	"cloudfs"
+#define CONFIG_DEFAULT_FILE   "cloudfs.conf"
+#define CONFIG_DEFAULT_GROUP  "cloudfs"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Structs
 
 typedef struct config_var {
-	char *name, *value;
-	struct config_var *next;
+  char *name, *value;
+  struct config_var *next;
 } *config_var;
 
 ////////////////////////////////////////////////////////////////////////////////

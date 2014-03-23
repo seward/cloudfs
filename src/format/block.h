@@ -1,6 +1,6 @@
 /*
  * cloudfs: block header
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  */
 
@@ -14,12 +14,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Macros
 
-#define BLOCK_THREAD_STACK_SIZE		(1 * 1024 * 1024)
+#define BLOCK_THREAD_STACK_SIZE    (1 * 1024 * 1024)
 
-#define BLOCK_NBD_SIZE			4096
-#define BLOCK_NBD_SIZE_LOG2		12
+#define BLOCK_NBD_SIZE      4096
+#define BLOCK_NBD_SIZE_LOG2    12
 
-#define BLOCK_LOCAL_IP			"127.0.0.1"
+#define BLOCK_LOCAL_IP      "127.0.0.1"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Format table
@@ -66,4 +66,5 @@ void block_nbd_thread_sync(void *__unused);
 void block_nbd_process();
 bool block_nbd_read(void *data, size_t len);
 bool block_nbd_write(void *data, size_t len);
-int block_nbd_commit_object(uint32_t type, char *p_buf, uint32_t p_len, uint64_t p_from);
+int block_nbd_commit_object(uint32_t type, char *p_buf, uint32_t p_len,
+                            uint64_t p_from);

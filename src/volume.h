@@ -1,6 +1,6 @@
 /*
  * cloudfs: volume header
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  */
 
@@ -16,74 +16,77 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Macros
 
-#define VOLUME_VERSION			1
+#define VOLUME_VERSION              1
 
-#define VOLUME_MAX			256
-#define VOLUME_CAP_STRING_MAX		32
-#define VOLUME_NAME_MAX			64
+#define VOLUME_MAX                  256
+#define VOLUME_CAP_STRING_MAX       32
+#define VOLUME_NAME_MAX             64
 
-#define VOLUME_LOCK_PREFIX		"cloudfs.lock."
-#define VOLUME_LOCK_STRING_MAX		(sizeof(VOLUME_LOCK_PREFIX) + VOLUME_NAME_MAX + 1)
-#define VOLUME_LOCK_DATA		"**LOCK**"
+#define VOLUME_LOCK_PREFIX          "cloudfs.lock."
+#define VOLUME_LOCK_STRING_MAX      (sizeof(VOLUME_LOCK_PREFIX) + \
+                                     VOLUME_NAME_MAX + 1)
+#define VOLUME_LOCK_DATA            "**LOCK**"
 
-#define VOLUME_METADATA_PREFIX		"cloudfs.metadata."
-#define VOLUME_METADATA_STRING_MAX	(sizeof(VOLUME_METADATA_PREFIX) + VOLUME_NAME_MAX + 1)
+#define VOLUME_METADATA_PREFIX      "cloudfs.metadata."
+#define VOLUME_METADATA_STRING_MAX  (sizeof(VOLUME_METADATA_PREFIX) + \
+                                     VOLUME_NAME_MAX + 1)
 
-#define VOLUME_KEYCHECK_SIZE		64
-#define VOLUME_FORMAT_SIZE		32
+#define VOLUME_KEYCHECK_SIZE        64
+#define VOLUME_FORMAT_SIZE          32
 
-#define VOLUME_OBJECT_PREFIX		"cloudfs.object."
-#define VOLUME_OBJECT_STRING_MAX	(sizeof(VOLUME_OBJECT_PREFIX) + VOLUME_NAME_MAX + 35)
+#define VOLUME_OBJECT_PREFIX        "cloudfs.object."
+#define VOLUME_OBJECT_STRING_MAX    (sizeof(VOLUME_OBJECT_PREFIX) + \
+                                     VOLUME_NAME_MAX + 35)
 
-#define VOLUME_LIST_FORMAT		"%-15s %-8s %-10s %-21s %-6s %-8s"
+#define VOLUME_LIST_FORMAT          "%-15s %-8s %-10s %-21s %-6s %-8s"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume object identifier
 
 struct volume_object {
-	uint64_t index, chunk;
+  uint64_t index, chunk;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume metadata structure
 
 enum volume_metadata_flags {
-	VOLUME_ENCRYPT  = 1 << 0,
+  VOLUME_ENCRYPT  = 1 << 0,
 };
 
 struct volume_metadata {
-	uint32_t version, flags;
-	uint64_t capacity, ctime;
-	char keycheck[VOLUME_KEYCHECK_SIZE];
-	char format[VOLUME_FORMAT_SIZE];
+  uint32_t version, flags;
+  uint64_t capacity, ctime;
+  char keycheck[VOLUME_KEYCHECK_SIZE];
+  char format[VOLUME_FORMAT_SIZE];
 } __attribute__((packed));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume interface table definition
 
 enum volume_intr_flags {
-	VOLUME_NEED_SIZE = 1 << 0,
+  VOLUME_NEED_SIZE = 1 << 0,
 };
 
 struct volume_intr {
-	void (*mount)   (const struct volume_metadata *, const char *);
-	void (*unmount) (const struct volume_metadata *, const char *);
-	void (*fsck)    (const struct volume_metadata *);
+  void (*mount)   (const struct volume_metadata *, const char *);
+  void (*unmount) (const struct volume_metadata *, const char *);
+  void (*fsck)    (const struct volume_metadata *);
 
-	uint32_t flags;
+  uint32_t flags;
 };
 
 struct volume_intr_opt {
-	const char *name;
-	const struct volume_intr *intr;
+  const char *name;
+  const struct volume_intr *intr;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume operation table definition
 
 struct volume_oper {
-	const char *name;
-	void (*func)();
+  const char *name;
+  void (*func)();
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,8 +121,10 @@ bool volume_intr_set_format(const char *fmt);
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Volume interface functions
 
-int volume_list_object(struct volume_object prefix, uint32_t max_count, struct store_list *list);
-int volume_put_object(struct volume_object object, const char *buf, uint32_t len);
+int volume_list_object(struct volume_object prefix, uint32_t max_count,
+                       struct store_list *list);
+int volume_put_object(struct volume_object object, const char *buf,
+                      uint32_t len);
 int volume_get_object(struct volume_object object, char **buf, uint32_t *len);
 int volume_exists_object(struct volume_object object);
 int volume_delete_object(struct volume_object object);
@@ -130,7 +135,7 @@ int volume_delete_object(struct volume_object object);
 void volume_metadata_string(char name[static VOLUME_METADATA_STRING_MAX]);
 void volume_lock_string(char name[static VOLUME_LOCK_STRING_MAX]);
 void volume_object_string(char name[static VOLUME_OBJECT_STRING_MAX],
-		struct volume_object object);
+                          struct volume_object object);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     File size conversion

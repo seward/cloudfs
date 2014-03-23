@@ -1,11 +1,11 @@
 
    cloudfs: design document
-	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+     By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
 
 
 * Todo
-	- Write and include better backup script
-	- FSCK support for vfs
-	- Snapshot support
-	- Add disk cache support
-	- Add Google Cloud Storage
+  - Write and include better backup script
+  - FSCK support for vfs
+  - Snapshot support
+  - Add disk cache support
+  - Add Google Cloud Storage

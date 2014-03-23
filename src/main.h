@@ -1,6 +1,6 @@
 /*
  * cloudfs: main header
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  */
 

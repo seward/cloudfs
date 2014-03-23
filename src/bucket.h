@@ -1,6 +1,6 @@
 /*
  * cloudfs: bucket header
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  */
 
@@ -14,14 +14,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Macros
 
-#define BUCKET_MAX	256
+#define BUCKET_MAX  256
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Bucket operation table definition
 
 struct bucket_oper {
-	const char *name;
-	void (*func)();
+  const char *name;
+  void (*func)();
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 /*
  * cloudfs: mt source
- *	By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
+ *   By Benjamin Kittridge. Copyright (C) 2013, All rights reserved.
  *
  *    A C-program for MT19937-64 (2004/9/29 version).
  *    Coded by Takuji Nishimura and Makoto Matsumoto.
@@ -89,95 +89,95 @@ static int32_t mt_idx = NN + 1;
 // Section:     Seed random number generator
 
 static uint32_t mix(uint32_t a, uint32_t b, uint32_t c) {
-	a = a - b; a = a - c; a = a ^ (c >> 13);
-	b = b - c; b = b - a; b = b ^ (a << 8);
-	c = c - a; c = c - b; c = c ^ (b >> 13);
-	a = a - b; a = a - c; a = a ^ (c >> 12);
-	b = b - c; b = b - a; b = b ^ (a << 16);
-	c = c - a; c = c - b; c = c ^ (b >> 5);
-	a = a - b; a = a - c; a = a ^ (c >> 3);
-	b = b - c; b = b - a; b = b ^ (a << 10);
-	c = c - a; c = c - b; c = c ^ (b >> 15);
-	return c;
+  a = a - b; a = a - c; a = a ^ (c >> 13);
+  b = b - c; b = b - a; b = b ^ (a << 8);
+  c = c - a; c = c - b; c = c ^ (b >> 13);
+  a = a - b; a = a - c; a = a ^ (c >> 12);
+  b = b - c; b = b - a; b = b ^ (a << 16);
+  c = c - a; c = c - b; c = c ^ (b >> 5);
+  a = a - b; a = a - c; a = a ^ (c >> 3);
+  b = b - c; b = b - a; b = b ^ (a << 10);
+  c = c - a; c = c - b; c = c ^ (b >> 15);
+  return c;
 }
 
 void mt_init() {
-	srand(mix(clock(), time(NULL), getpid()));
-	mt_srand((((uint64_t) rand()) << 33) |
-			(((uint64_t) rand()) << 2) |
-			(rand() & 3));
+  srand(mix(clock(), time(NULL), getpid()));
+  mt_srand((((uint64_t) rand()) << 33) |
+           (((uint64_t) rand()) << 2) |
+           (rand() & 3));
 }
 
 void mt_srand(uint64_t seed) {
-	mt_seed[0] = seed;
-	for (mt_idx = 1; mt_idx < NN; mt_idx++)
-		mt_seed[mt_idx] = (6364136223846793005ULL * (mt_seed[mt_idx-1] ^
-				(mt_seed[mt_idx-1] >> 62)) + mt_idx);
+  mt_seed[0] = seed;
+  for (mt_idx = 1; mt_idx < NN; mt_idx++)
+    mt_seed[mt_idx] = (6364136223846793005ULL * (mt_seed[mt_idx-1] ^
+                      (mt_seed[mt_idx-1] >> 62)) + mt_idx);
 }
 
 void mt_srand_arr(uint64_t init_key[], uint64_t key_length) {
-	uint64_t i, j, k;
+  uint64_t i, j, k;
 
-	mt_srand(19650218ULL);
+  mt_srand(19650218ULL);
 
-	i = 1;
-	j = 0;
-	k = (NN > key_length ? NN : key_length);
-	for (; k; k--) {
-		mt_seed[i] = (mt_seed[i] ^ ((mt_seed[i-1] ^ (mt_seed[i-1] >> 62)) *
-			3935559000370003845ULL)) + init_key[j] + j;
-		i++;
-		j++;
-		if (i >= NN) {
-			mt_seed[0] = mt_seed[NN-1];
-			i = 1;
-		}
-		if (j >= key_length) j = 0;
-	}
-	for (k = NN - 1; k; k--) {
-		mt_seed[i] = (mt_seed[i] ^ ((mt_seed[i-1] ^ (mt_seed[i-1] >> 62)) *
-			2862933555777941757ULL)) - i;
-		i++;
-		if (i >= NN) {
-			mt_seed[0] = mt_seed[NN-1];
-			i = 1;
-		}
-	}
+  i = 1;
+  j = 0;
+  k = (NN > key_length ? NN : key_length);
+  for (; k; k--) {
+    mt_seed[i] = (mt_seed[i] ^ ((mt_seed[i-1] ^ (mt_seed[i-1] >> 62)) *
+                 3935559000370003845ULL)) + init_key[j] + j;
+    i++;
+    j++;
+    if (i >= NN) {
+      mt_seed[0] = mt_seed[NN-1];
+      i = 1;
+    }
+    if (j >= key_length) j = 0;
+  }
+  for (k = NN - 1; k; k--) {
+    mt_seed[i] = (mt_seed[i] ^ ((mt_seed[i-1] ^ (mt_seed[i-1] >> 62)) *
+                 2862933555777941757ULL)) - i;
+    i++;
+    if (i >= NN) {
+      mt_seed[0] = mt_seed[NN-1];
+      i = 1;
+    }
+  }
 
-	mt_seed[0] = 1ULL << 63;
+  mt_seed[0] = 1ULL << 63;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Generate random 64-bit number
 
 uint64_t mt_rand() {
-	int32_t i;
-	uint64_t x;
-	static uint64_t mag01[2] = {0ULL, MATRIX_A};
+  int32_t i;
+  uint64_t x;
+  static uint64_t mag01[2] = {0ULL, MATRIX_A};
 
-	if (mt_idx >= NN) {
-		if (mt_idx == NN + 1)
-			mt_srand(5489ULL);
+  if (mt_idx >= NN) {
+    if (mt_idx == NN + 1)
+      mt_srand(5489ULL);
 
-		for (i = 0; i < NN - MM; i++) {
-			x = (mt_seed[i] & UM) | (mt_seed[i+1] & LM);
-			mt_seed[i] = mt_seed[i+MM] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
-		}
-		for (; i < NN - 1; i++) {
-			x = (mt_seed[i] & UM) | (mt_seed[i+1] & LM);
-			mt_seed[i] = mt_seed[i+(MM-NN)] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
-		}
-		x = (mt_seed[NN-1] & UM) | (mt_seed[0] & LM);
-		mt_seed[NN-1] = mt_seed[MM-1] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
+    for (i = 0; i < NN - MM; i++) {
+      x = (mt_seed[i] & UM) | (mt_seed[i+1] & LM);
+      mt_seed[i] = mt_seed[i+MM] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
+    }
+    for (; i < NN - 1; i++) {
+      x = (mt_seed[i] & UM) | (mt_seed[i+1] & LM);
+      mt_seed[i] = mt_seed[i+(MM-NN)] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
+    }
+    x = (mt_seed[NN-1] & UM) | (mt_seed[0] & LM);
+    mt_seed[NN-1] = mt_seed[MM-1] ^ (x >> 1) ^ mag01[(int)(x&1ULL)];
 
-		mt_idx = 0;
-	}
+    mt_idx = 0;
+  }
 
-	x = mt_seed[mt_idx++];
+  x = mt_seed[mt_idx++];
 
-	x ^= (x >> 29) & 0x5555555555555555ULL;
-	x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
-	x ^= (x << 37) & 0xFFF7EEE000000000ULL;
-	x ^= (x >> 43);
-	return x;
+  x ^= (x >> 29) & 0x5555555555555555ULL;
+  x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
+  x ^= (x << 37) & 0xFFF7EEE000000000ULL;
+  x ^= (x >> 43);
+  return x;
 }
