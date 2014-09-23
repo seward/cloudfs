@@ -390,7 +390,7 @@ static void astrcat(char **str, const char *format, ...) {
   *str = ptr;
 }
 
-void curdate(char *str, int32_t size) {
+static void curdate(char *str, int32_t size) {
   static const char *lookup_week[7]   = { "Sun", "Mon", "Tue", "Wed",
                                           "Thu", "Fri", "Sat" },
                     *lookup_month[12] = { "Jan", "Feb", "Mar", "Apr",

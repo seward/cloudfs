@@ -1,0 +1,6 @@
+*.o
+*.d
+.project
+.svn
+bin/cloudfs
+config.mk
