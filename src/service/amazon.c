@@ -62,6 +62,8 @@ void amazon_load() {
   if (!(amazon_secret = config_get("amazon-secret")))
     error("Must specify --amazon-secret");
   amazon_location = config_get("amazon-location");
+
+  curl_global_init(CURL_GLOBAL_ALL);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
