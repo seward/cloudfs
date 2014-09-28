@@ -456,6 +456,7 @@ void amazon_request_perform(struct amazon_request *c) {
   if (!(curl = curl_easy_init()))
     error("Unable to init curl");
 
+  curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method(c));
   if (c->method == AMAZON_REQUEST_HEAD)
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
