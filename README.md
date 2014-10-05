@@ -20,8 +20,13 @@ Requirements
 ----
 1. Linux
 
-2. libfuse
+2. Fuse
 
+3. Zlib
+
+4. Curl
+
+4. OpenSSL
 
 
 Compiling and installing
