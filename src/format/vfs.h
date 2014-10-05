@@ -54,9 +54,11 @@ struct vfs_inode_ptr {
 };
 
 struct vfs_inode {
+  bool is_root, purge_contents;
+  uint32_t refcount;
   struct vfs_inode_data data;
   struct vfs_inode_ptr ptr;
-  bool is_root, modified, new_file;
+  struct vfs_inode *prev, *next;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +68,7 @@ typedef uint64_t vfs_fd_handle;
 
 struct vfs_fd {
   vfs_fd_handle fh;
-  struct vfs_inode node;
+  struct vfs_inode *node;
   struct vfs_fd *prev, *next;
 };
 
@@ -85,12 +87,6 @@ void vfs_mount(const struct volume_metadata *md, const char *path);
 void vfs_unmount(const struct volume_metadata *md, const char *path);
 
 ////////////////////////////////////////////////////////////////////////////////
-// Section:     Check filesystem
-
-void vfs_fsck(const struct volume_metadata *md);
-void vfs_fsck_dir(uint64_t inode);
-
-////////////////////////////////////////////////////////////////////////////////
 // Section:     Path parsing
 
 char **vfs_path_split(char *str);
@@ -99,12 +95,13 @@ void vfs_path_split_free(char **dst);
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Directory operations
 
-struct vfs_inode **vfs_dir_read(uint64_t inode,
-                                struct vfs_inode_ptr *empty_ptr);
-bool vfs_dir_read_pass(struct vfs_inode_ptr *ptr,
-                       struct vfs_inode_ptr *save_ptr,
-                       void *data, uint32_t len);
-void vfs_dir_read_free(struct vfs_inode **list);
+int vfs_dir_read(uint64_t inode, struct vfs_inode **node_list,
+                 struct vfs_inode_ptr *empty_ptr);
+int vfs_dir_read_pass(struct vfs_inode_ptr *ptr,
+                      struct vfs_inode_ptr *save_ptr,
+                      void *data, uint32_t len, bool *eof);
+void vfs_dir_copy_from_open_list(struct vfs_inode *node);
+void vfs_dir_read_free(struct vfs_inode *node_list);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Node lookup
@@ -112,15 +109,18 @@ void vfs_dir_read_free(struct vfs_inode **list);
 int vfs_node_lookup(const char *path, struct vfs_inode **node, bool new_file);
 int vfs_node_rehash(struct vfs_inode *node);
 int vfs_node_commit(struct vfs_inode *node);
-int vfs_node_commit_and_free(struct vfs_inode *node);
-int vfs_node_delete(struct vfs_inode *node);
-void vfs_node_free(struct vfs_inode *node);
+int vfs_node_commit_and_deref(struct vfs_inode *node);
+int vfs_node_write(struct vfs_inode *node);
+int vfs_node_delete(struct vfs_inode *node, bool purge_contents);
+void vfs_node_ref(struct vfs_inode *node);
+void vfs_node_purge_contents(struct vfs_inode *node);
+void vfs_node_deref(struct vfs_inode *node);
+void vfs_node_clear();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Stat information
 
 void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src);
-void vfs_stat_copy(struct vfs_inode_data *dst, struct vfs_inode_data *src);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     File descriptor functions

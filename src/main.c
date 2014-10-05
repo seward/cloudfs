@@ -48,6 +48,7 @@ static struct option opt_field[] = {
   { "password-prompt",     0,  NULL,  OPT_NRML    },
   { "readonly",            0,  NULL,  OPT_NRML    },
   { "nofork",              0,  NULL,  OPT_NRML    },
+  { "norandom",            0,  NULL,  OPT_NRML    },
   { "force",               0,  NULL,  OPT_NRML    },
 
   { "cache-type",          1,  NULL,  OPT_NRML    },
@@ -101,6 +102,7 @@ void usage() {
   fprintf(stderr, "\t%-25s Prompt for encryption password\n",   "--password-prompt");
   fprintf(stderr, "\t%-25s Read only\n",                        "--readonly");
   fprintf(stderr, "\t%-25s Do not fork into background\n",      "--nofork");
+  fprintf(stderr, "\t%-25s Do not use /dev/random\n",           "--norandom");
   fprintf(stderr, "\t%-25s Force mounting volume\n",            "--force");
   fprintf(stderr, "\n");
   fprintf(stderr, "Cache Arguments:\n");

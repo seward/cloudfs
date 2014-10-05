@@ -32,6 +32,8 @@ static uint8_t crypt_cipher_key[CRYPT_KEY_SIZE];
 
 static int32_t crypt_blocksize = 0;
 
+static bool crypt_use_random = true;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Crypt construction / destruction
 
@@ -56,6 +58,9 @@ void crypt_load() {
 
   crypt_blocksize = EVP_CIPHER_block_size(crypt_cipher);
   crypt_cipher_enabled = true;
+
+  if (config_get("norandom"))
+    crypt_use_random = false;
 }
 
 void crypt_unload() {
@@ -146,9 +151,16 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf,
     return false;
   }
 
-  if (!RAND_bytes(iv, sizeof(iv))) {
-    warning("RAND_bytes failed");
-    return false;
+  if (crypt_use_random) {
+    if (RAND_bytes(iv, sizeof(iv)) <= 0) {
+      warning("RAND_bytes failed");
+      return false;
+    }
+  } else {
+    if (RAND_pseudo_bytes(iv, sizeof(iv)) < 0) {
+      warning("RAND_pseudo_bytes failed");
+      return false;
+    }
   }
 
   EVP_CIPHER_CTX_init(&ctx);

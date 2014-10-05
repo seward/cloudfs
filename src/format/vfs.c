@@ -28,6 +28,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Global variables
 
+static struct vfs_inode *vfs_node_open_list = NULL;
+
 static struct vfs_fd *vfs_fd_list = NULL;
 
 static uint64_t vfs_fsid = 0;
@@ -38,7 +40,7 @@ static uint64_t vfs_fsid = 0;
 const struct volume_intr vfs_intr = {
   .mount    = vfs_mount,
   .unmount  = vfs_unmount,
-  .fsck     = vfs_fsck,
+  .fsck     = NULL,
 };
 
 static struct fuse_operations vfs_oper = {
@@ -68,7 +70,7 @@ static struct fuse_operations vfs_oper = {
   .fsync         = vfs_fuse_fsync,
   .statfs        = vfs_fuse_statfs,
 
-  .flag_nullpath_ok  = 0,
+  .flag_nullpath_ok  = 1,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,6 +88,7 @@ void vfs_mount(const struct volume_metadata *md, const char *path) {
   const char *argv[] = {
       "cloudfs", path,
       "-f", "-s",
+      "-o", "hard_remove",
       NULL };
 
   notice("Volume mounting on %s", path);
@@ -105,6 +108,7 @@ void vfs_mount(const struct volume_metadata *md, const char *path) {
   notice("Volume disconnecting");
 
   vfs_fd_clear();
+  vfs_node_clear();
   object_unload();
 }
 
@@ -116,38 +120,6 @@ void vfs_unmount(const struct volume_metadata *md, const char *path) {
     exit(0);
   }
   waitpid(pid, NULL, 0);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Section:     Check filesystem
-
-void vfs_fsck(const struct volume_metadata *md) {
-  object_load();
-
-  vfs_fsck_dir(0);
-
-  object_unload();
-
-  notice("Filesystem is clean");
-}
-
-void vfs_fsck_dir(uint64_t inode) {
-  struct vfs_inode **list, **lptr;
-
-  if (!(list = vfs_dir_read(inode, NULL)))
-    return;
-
-  for (lptr = list; *lptr; lptr++) {
-    struct vfs_inode *node = *lptr;
-
-    if (S_ISDIR(node->data.mode)) {
-      vfs_fsck_dir(node->data.ino);
-    } else {
-      // TODO: Write me
-    }
-  }
-
-  vfs_dir_read_free(list);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -195,20 +167,18 @@ void vfs_path_split_free(char **dst) {
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Directory operations
 
-struct vfs_inode **vfs_dir_read(uint64_t inode,
-                                struct vfs_inode_ptr *empty_ptr) {
-  uint32_t i;
+int vfs_dir_read(uint64_t inode, struct vfs_inode **node_list,
+                 struct vfs_inode_ptr *empty_ptr) {
   struct vfs_inode_ptr ptr;
-  struct vfs_inode **node_list, *node;
-  bool found_empty;
+  struct vfs_inode *node;
+  bool found_empty, eof;
+  int ret;
 
-  if (!(node_list = malloc(sizeof(*node_list))))
-    stderror("malloc");
-  node_list[0] = NULL;
-  node = NULL;
-  i = 0;
-
+  if (node_list)
+    *node_list = NULL;
   found_empty = false;
+  eof = false;
+
   ptr.object.index = inode;
   ptr.object.chunk = 0;
   ptr.offt = 0;
@@ -216,10 +186,18 @@ struct vfs_inode **vfs_dir_read(uint64_t inode,
     if (!(node = calloc(sizeof(*node), 1)))
       stderror("calloc");
 
-    if (!vfs_dir_read_pass(&ptr, &node->ptr, &node->data, sizeof(node->data))) {
+    if ((ret = vfs_dir_read_pass(&ptr, &node->ptr, &node->data,
+                                 sizeof(node->data), &eof)) != 0) {
+      free(node);
+      if (node_list)
+        vfs_dir_read_free(*node_list);
+      return ret;
+    }
+    if (eof) {
       free(node);
       break;
     }
+
     if (!(node->data.flag & VFS_INODE_FLAG_VALID)) {
       if (empty_ptr && !found_empty) {
         memcpy(empty_ptr, &node->ptr, sizeof(*empty_ptr));
@@ -229,22 +207,27 @@ struct vfs_inode **vfs_dir_read(uint64_t inode,
       continue;
     }
 
-    if (!(node_list = realloc(node_list, (i + 2) * sizeof(*node_list))))
-      stderror("realloc");
-    node_list[i] = node;
-    node_list[i + 1] = NULL;
-    node = NULL;
-    i++;
+    vfs_dir_copy_from_open_list(node);
+
+    if (node_list) {
+      node->next = *node_list;
+      if (*node_list)
+        (*node_list)->prev = node;
+      *node_list = node;
+    } else {
+      free(node);
+    }
   }
 
   if (empty_ptr && !found_empty)
-    vfs_dir_read_pass(&ptr, empty_ptr, NULL, sizeof(node->data));
-  return node_list;
+    vfs_dir_read_pass(&ptr, empty_ptr, NULL, sizeof(node->data), &eof);
+  return 0;
 }
 
-bool vfs_dir_read_pass(struct vfs_inode_ptr *ptr,
-                       struct vfs_inode_ptr *save_ptr,
-                       void *data, uint32_t len) {
+int vfs_dir_read_pass(struct vfs_inode_ptr *ptr,
+                      struct vfs_inode_ptr *save_ptr,
+                      void *data, uint32_t len,
+                      bool *eof) {
   uint32_t rlen;
   int ret;
 
@@ -255,30 +238,44 @@ bool vfs_dir_read_pass(struct vfs_inode_ptr *ptr,
   memcpy(save_ptr, ptr, sizeof(*ptr));
 
   if (!data)
-    return true;
+    return 0;
 
   if ((ret = object_read(ptr->object, ptr->offt, data,
                          len, &rlen)) != SUCCESS) {
     if (ret != NOT_FOUND)
       warning("Read error on inode %016" PRIx64, ptr->object.index);
-    return false;
+    return -EFAULT;
   }
-  if (rlen < len)
-    return false;
+  if (rlen < len) {
+    *eof = true;
+    return 0;
+  }
 
   ptr->offt += rlen;
-  return true;
+  return 0;
 }
 
-void vfs_dir_read_free(struct vfs_inode **list) {
-  struct vfs_inode **lptr;
+void vfs_dir_copy_from_open_list(struct vfs_inode *node) {
+  struct vfs_inode *f_node;
 
-  for (lptr = list; *lptr; lptr++) {
-    struct vfs_inode *node = *lptr;
-
-    vfs_node_free(node);
+  for (f_node = vfs_node_open_list; f_node; f_node = f_node->next) {
+    if ((f_node->data.flag & VFS_INODE_FLAG_VALID) &&
+        node->data.ino == f_node->data.ino) {
+      memcpy(&node->data, &f_node->data, sizeof(node->data));
+      break;
+    }
   }
-  free(list);
+}
+
+void vfs_dir_read_free(struct vfs_inode *node_list) {
+  struct vfs_inode *node;
+
+  while (node_list) {
+    node = node_list;
+    node_list = node->next;
+
+    free(node);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -286,19 +283,21 @@ void vfs_dir_read_free(struct vfs_inode **list) {
 
 int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
                     bool new_file) {
-  struct vfs_inode *res_node;
+  struct vfs_inode *res_node, *f_node;
   struct vfs_inode_ptr empty_ptr, *pend;
   char *mpath, **path_list, **pptr;
   uint64_t parent_inode;
   bool found;
   int ret;
 
+  if (!(res_node = calloc(sizeof(*res_node), 1)))
+    stderror("calloc");
+  vfs_node_ref(res_node);
+
   if (!(mpath = strdup(path)))
     stderror("strdup");
   if (!(path_list = vfs_path_split(mpath)))
     error("Error splitting path");
-  if (!(res_node = calloc(sizeof(*res_node), 1)))
-    stderror("calloc");
 
   pend = (new_file ? &empty_ptr : NULL);
 
@@ -309,6 +308,7 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
       ret = -EEXIST;
     } else {
       strcpy(res_node->data.name, "/");
+      res_node->data.flag |= VFS_INODE_FLAG_VALID;
       res_node->data.mode = S_IFDIR | 0755;
       res_node->data.nlink = 2;
       res_node->data.ctime = res_node->data.mtime =
@@ -317,23 +317,22 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
     }
   } else {
     for (pptr = path_list; *pptr; pptr++) {
-      struct vfs_inode **list, **lptr;
+      struct vfs_inode *dir_list, *found_node;
       bool last_file = (pptr[1] ? false : true);
 
-      if (!(list = vfs_dir_read(parent_inode, pend))) {
+      if ((ret = vfs_dir_read(parent_inode, &dir_list, pend)) != 0) {
         warning("File system missing data at inode %016" PRIx64,
                 parent_inode);
-        ret = -EFAULT;
         break;
       }
 
       found = false;
-      for (lptr = list; *lptr; lptr++) {
-        struct vfs_inode *found_node = *lptr;
-
+      for (found_node = dir_list; found_node; found_node = found_node->next) {
         if (!strcmp(found_node->data.name, *pptr)) {
-          if (last_file)
-            memcpy(res_node, found_node, sizeof(*res_node));
+          if (last_file) {
+            memcpy(&res_node->data, &found_node->data, sizeof(res_node->data));
+            memcpy(&res_node->ptr, &found_node->ptr, sizeof(res_node->ptr));
+          }
           parent_inode = found_node->data.ino;
           if (last_file || S_ISDIR(found_node->data.mode))
             found = true;
@@ -343,7 +342,7 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
         }
       }
 
-      vfs_dir_read_free(list);
+      vfs_dir_read_free(dir_list);
 
       if (new_file && last_file) {
         if (found) {
@@ -357,7 +356,6 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
           res_node->data.flag |= VFS_INODE_FLAG_VALID;
           res_node->data.ctime = res_node->data.mtime =
                                  res_node->data.atime = time(NULL);
-          res_node->new_file = true;
         }
         break;
       }
@@ -372,50 +370,48 @@ int vfs_node_lookup(const char *path, struct vfs_inode **out_node,
   vfs_path_split_free(path_list);
   free(mpath);
 
-  if (!ret && out_node) {
-    res_node->data.atime = time(NULL);
-    *out_node = res_node;
-  } else {
-    vfs_node_free(res_node);
+  if (ret || !out_node) {
+    free(res_node);
+    return ret;
   }
+
+  for (f_node = vfs_node_open_list; f_node; f_node = f_node->next) {
+    if ((f_node->data.flag & VFS_INODE_FLAG_VALID) &&
+        res_node->data.ino == f_node->data.ino) {
+      free(res_node);
+      vfs_node_ref(f_node);
+      f_node->data.atime = time(NULL);
+      *out_node = f_node;
+      return ret;
+    }
+  }
+
+  res_node->data.atime = time(NULL);
+  res_node->next = vfs_node_open_list;
+  if (vfs_node_open_list)
+    vfs_node_open_list->prev = res_node;
+  vfs_node_open_list = res_node;
+  *out_node = res_node;
   return ret;
 }
 
-int vfs_node_rehash(struct vfs_inode *node) {
-  struct vfs_inode_data node_data;
-  uint32_t rlen;
-
-  if (object_read(node->ptr.object, node->ptr.offt, (char*) &node_data,
-                  sizeof(node_data), &rlen) != SUCCESS ||
-      rlen < sizeof(node_data)) {
-    warning("Read error on inode %016" PRIx64, node->ptr.object.index);
-    return -EFAULT;
-  }
-  if (node->data.ino == node_data.ino &&
-      (node_data.flag & VFS_INODE_FLAG_VALID))
-    memcpy(&node->data, &node_data, sizeof(node_data));
-  return 0;
+int vfs_node_commit(struct vfs_inode *node) {
+  if (!(node->data.flag & VFS_INODE_FLAG_VALID))
+    return 0;
+  return vfs_node_write(node);
 }
 
-int vfs_node_commit(struct vfs_inode *node) {
-  struct vfs_inode_data node_data;
-  uint32_t rlen;
+int vfs_node_commit_and_deref(struct vfs_inode *node) {
+  int ret;
 
+  ret = vfs_node_commit(node);
+  vfs_node_deref(node);
+  return ret;
+}
+
+int vfs_node_write(struct vfs_inode *node) {
   if (node->is_root)
     return 0;
-
-  if (!node->new_file) {
-    if (object_read(node->ptr.object, node->ptr.offt, (char*) &node_data,
-                    sizeof(node_data), &rlen) != SUCCESS ||
-        rlen < sizeof(node_data)) {
-      warning("Read error on inode %016" PRIx64, node->ptr.object.index);
-      return -EFAULT;
-    }
-    if (node->data.ino != node_data.ino ||
-        !(node_data.flag & VFS_INODE_FLAG_VALID))
-      return 0;
-  }
-
   if (object_write(node->ptr.object, node->ptr.offt, (const char*) &node->data,
                    sizeof(node->data)) != SUCCESS) {
     warning("Write error on inode %016" PRIx64, node->ptr.object.index);
@@ -424,15 +420,19 @@ int vfs_node_commit(struct vfs_inode *node) {
   return 0;
 }
 
-int vfs_node_commit_and_free(struct vfs_inode *node) {
-  int ret;
-
-  ret = vfs_node_commit(node);
-  vfs_node_free(node);
-  return ret;
+int vfs_node_delete(struct vfs_inode *node, bool purge_contents) {
+  node->purge_contents = purge_contents;
+  if (!(node->data.flag & VFS_INODE_FLAG_VALID))
+    return 0;
+  node->data.flag &= ~VFS_INODE_FLAG_VALID;
+  return vfs_node_write(node);
 }
 
-int vfs_node_delete(struct vfs_inode *node) {
+void vfs_node_ref(struct vfs_inode *node) {
+  node->refcount++;
+}
+
+void vfs_node_purge_contents(struct vfs_inode *node) {
   struct volume_object object;
   struct vfs_inode_ptr last_ptr;
   uint64_t max_chunk;
@@ -440,14 +440,11 @@ int vfs_node_delete(struct vfs_inode *node) {
   object.index = node->data.ino;
   object.chunk = 0;
   if (S_ISDIR(node->data.mode)) {
-    struct vfs_inode **list;
-
-    if (!(list = vfs_dir_read(node->data.ino, &last_ptr))) {
+    if (vfs_dir_read(node->data.ino, NULL, &last_ptr) != 0) {
       warning("File system missing data at inode %016" PRIx64,
               node->data.ino);
-      return -EFAULT;
+      return;
     }
-    vfs_dir_read_free(list);
 
     max_chunk = last_ptr.object.chunk;
   } else {
@@ -461,30 +458,36 @@ int vfs_node_delete(struct vfs_inode *node) {
     }
     object.chunk++;
   }
-
-  node->data.flag &= ~VFS_INODE_FLAG_VALID;
-  return 0;
 }
 
-void vfs_node_free(struct vfs_inode *node) {
-  free(node);
+void vfs_node_deref(struct vfs_inode *node) {
+  node->refcount--;
+  if (!node->refcount) {
+    if (node->prev)
+      node->prev->next = node->next;
+    else
+      vfs_node_open_list = node->next;
+    if (node->next)
+      node->next->prev = node->prev;
+    if (node->purge_contents)
+      vfs_node_purge_contents(node);
+    free(node);
+  }
+}
+
+void vfs_node_clear() {
+  struct vfs_inode *node;
+
+  while (vfs_node_open_list) {
+    node = vfs_node_open_list;
+    vfs_node_open_list = node->next;
+
+    free(node);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Stat information
-
-static inline mode_t normalize_mode(mode_t mode, mode_t default_mt,
-                                    bool force) {
-  mode_t mt;
-
-  mt = mode & S_IFMT;
-  if (force || !mt || mt == S_IFCHR || mt == S_IFBLK ||
-      mt == S_IFIFO || mt == S_IFSOCK) {
-    mode &= ~S_IFMT;
-    mode |= default_mt;
-  }
-  return mode;
-}
 
 void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src) {
   memset(dst, 0, sizeof(*dst));
@@ -492,7 +495,7 @@ void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src) {
   #define M(x) dst->st_##x = src->x
   M(mode),   M(uid),    M(gid),
   M(dev),    M(rdev),   M(size),
-  M(atime),   M(mtime),  M(ctime),
+  M(atime),  M(mtime),  M(ctime),
   M(ino);
   #undef M
 
@@ -500,15 +503,7 @@ void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src) {
   dst->st_blksize = VFS_FAKE_BLOCK_SIZE;
   dst->st_blocks = ((dst->st_size + VFS_FAKE_REPORT_SIZE - 1) &
                    ~(VFS_FAKE_REPORT_SIZE - 1)) / VFS_FAKE_REPORT_SIZE;
-  dst->st_mode = normalize_mode(dst->st_mode, S_IFREG, false);
-}
-
-void vfs_stat_copy(struct vfs_inode_data *dst, struct vfs_inode_data *src) {
-  char name[VFS_PATH_MAX];
-
-  memcpy(name, dst->name, sizeof(dst->name));
-  memcpy(dst, src, sizeof(*dst));
-  memcpy(dst->name, name, sizeof(dst->name));
+  dst->st_mode = dst->st_mode;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -520,12 +515,13 @@ vfs_fd_handle vfs_fd_create(struct vfs_inode *node) {
   if (!(fd = calloc(sizeof(*fd), 1)))
     stderror("calloc");
   fd->fh = unique_id();
-  memcpy(&fd->node, node, sizeof(fd->node));  // TODO: Should consolidate nodes
+  fd->node = node;
   fd->prev = NULL;
   fd->next = vfs_fd_list;
   if (vfs_fd_list)
     vfs_fd_list->prev = fd;
   vfs_fd_list = fd;
+  vfs_node_ref(fd->node);
   return fd->fh;
 }
 
@@ -533,8 +529,9 @@ struct vfs_inode *vfs_fd_lookup(vfs_fd_handle fh) {
   struct vfs_fd *fd;
 
   for (fd = vfs_fd_list; fd; fd = fd->next) {
-    if (fh == fd->fh)
-      return &fd->node;
+    if (fh == fd->fh) {
+      return fd->node;
+    }
   }
   return NULL;
 }
@@ -549,6 +546,7 @@ bool vfs_fd_close(vfs_fd_handle fh) {
   if (!fd)
     return false;
 
+  vfs_node_deref(fd->node);
   if (fd->prev)
     fd->prev->next = fd->next;
   else
@@ -566,6 +564,7 @@ void vfs_fd_clear() {
     fd = vfs_fd_list;
     vfs_fd_list = fd->next;
 
+    vfs_node_deref(fd->node);
     free(fd);
   }
 }
@@ -627,7 +626,7 @@ int vfs_fuse_getattr(const char *path, struct stat *stbuf) {
     return ret;
 
   vfs_stat_translate(stbuf, &node->data);
-  vfs_node_free(node);
+  vfs_node_deref(node);
   return 0;
 }
 
@@ -661,13 +660,13 @@ int vfs_fuse_readlink(const char *path, char *buf, uint64_t size) {
     ret = -EINVAL;
   else
     ret = vfs_io_perform(node, VFS_IO_READ, buf, size, 0);
-  vfs_node_free(node);
+  vfs_node_deref(node);
   return ret;
 }
 
 int vfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                      off_t offset, struct fuse_file_info *fi) {
-  struct vfs_inode *node, **list, **lptr;
+  struct vfs_inode *node, *dir_list, *found_node;
   struct stat dst;
   int ret;
 
@@ -675,7 +674,7 @@ int vfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     return ret;
 
   if (!S_ISDIR(node->data.mode)) {
-    vfs_node_free(node);
+    vfs_node_deref(node);
     return -EINVAL;
   }
 
@@ -683,22 +682,20 @@ int vfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, ".", &dst, 0);
   filler(buf, "..", NULL, 0);
 
-  if (!(list = vfs_dir_read(node->data.ino, NULL))) {
+  if ((ret = vfs_dir_read(node->data.ino, &dir_list, NULL)) != 0) {
     warning("File system missing data at inode %016" PRIx64,
             node->data.ino);
-    vfs_node_free(node);
-    return -EFAULT;
+    vfs_node_deref(node);
+    return ret;
   }
 
-  for (lptr = list; *lptr; lptr++) {
-    struct vfs_inode *found_node = *lptr;
-
+  for (found_node = dir_list; found_node; found_node = found_node->next) {
     vfs_stat_translate(&dst, &found_node->data);
     filler(buf, found_node->data.name, &dst, 0);
   }
 
-  vfs_dir_read_free(list);
-  vfs_node_free(node);
+  vfs_dir_read_free(dir_list);
+  vfs_node_deref(node);
   return 0;
 }
 
@@ -715,11 +712,11 @@ int vfs_fuse_mknod(const char *path, mode_t mode, dev_t rdev) {
   if ((ret = vfs_node_lookup(path, &node, true)) != 0)
     return ret;
 
-  node->data.mode = normalize_mode(mode, S_IFREG, false);
+  node->data.mode = mode;
   node->data.rdev = rdev;
   node->data.uid  = ctx->uid;
   node->data.gid  = ctx->gid;
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_mkdir(const char *path, mode_t mode) {
@@ -735,10 +732,10 @@ int vfs_fuse_mkdir(const char *path, mode_t mode) {
   if ((ret = vfs_node_lookup(path, &node, true)) != 0)
     return ret;
 
-  node->data.mode = normalize_mode(mode, S_IFDIR, true);
+  node->data.mode = mode | S_IFDIR;
   node->data.uid  = ctx->uid;
   node->data.gid  = ctx->gid;
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -754,12 +751,12 @@ int vfs_fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
   if ((ret = vfs_node_lookup(path, &node, true)) != 0)
     return ret;
 
-  node->data.mode = normalize_mode(mode, S_IFREG, false);
+  node->data.mode = mode;
   node->data.uid  = ctx->uid;
   node->data.gid  = ctx->gid;
 
   fi->fh = vfs_fd_create(node);
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_unlink(const char *path) {
@@ -771,15 +768,16 @@ int vfs_fuse_unlink(const char *path) {
   if ((ret = vfs_node_lookup(path, &node, false)) != 0)
     return ret;
 
-  if ((ret = vfs_node_delete(node)) != 0) {
-    vfs_node_free(node);
+  if ((ret = vfs_node_delete(node, true)) != 0) {
+    vfs_node_deref(node);
     return ret;
   }
-  return vfs_node_commit_and_free(node);
+  vfs_node_deref(node);
+  return 0;
 }
 
 int vfs_fuse_rmdir(const char *path) {
-  struct vfs_inode *node, **list;
+  struct vfs_inode *node, *dir_list;
   int ret;
 
   if (store_get_readonly())
@@ -788,26 +786,25 @@ int vfs_fuse_rmdir(const char *path) {
     return ret;
 
   if (!S_ISDIR(node->data.mode)) {
-    vfs_node_free(node);
+    vfs_node_deref(node);
     return -ENOTDIR;
   }
 
-  if (!(list = vfs_dir_read(node->data.ino, NULL))) {
+  if ((ret = vfs_dir_read(node->data.ino, &dir_list, NULL)) != 0) {
     warning("File system missing data at inode %016" PRIx64,
             node->data.ino);
-    vfs_node_free(node);
-    return -EFAULT;
+    vfs_node_deref(node);
+    return ret;
   }
 
-  if (*list) {
+  if (dir_list) {
     ret = -ENOTEMPTY;
   } else {
-    if ((ret = vfs_node_delete(node)) == 0)
-      ret = vfs_node_commit(node);
+    ret = vfs_node_delete(node, true);
   }
 
-  vfs_dir_read_free(list);
-  vfs_node_free(node);
+  vfs_dir_read_free(dir_list);
+  vfs_node_deref(node);
   return ret;
 }
 
@@ -830,36 +827,51 @@ int vfs_fuse_symlink(const char *from, const char *to) {
 
   if ((ret = vfs_io_perform(node, VFS_IO_WRITE, (char*) from,
                             strlen(from), 0)) != 0) {
-    vfs_node_free(node);
+    vfs_node_deref(node);
     return ret;
   }
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_rename(const char *from, const char *to) {
-  struct vfs_inode *node, *new_node;
+  struct vfs_inode *old_node, *new_node;
+  struct vfs_inode_ptr old_ptr;
   int ret;
 
   if (store_get_readonly())
     return -EPERM;
-  if ((ret = vfs_node_lookup(from, &node, false)) != 0)
+  if ((ret = vfs_node_lookup(from, &old_node, false)) != 0)
     return ret;
 
   if ((ret = vfs_node_lookup(to, &new_node, true)) != 0) {
-    if (ret != -EEXIST)
+    if (ret != -EEXIST) {
+      vfs_node_deref(old_node);
       return ret;
-    if ((ret = vfs_fuse_unlink(to)) != 0)
+    }
+    if ((ret = vfs_fuse_unlink(to)) != 0) {
+      vfs_node_deref(old_node);
       return ret;
-    if ((ret = vfs_node_lookup(to, &new_node, true)) != 0)
+    }
+    if ((ret = vfs_node_lookup(to, &new_node, true)) != 0) {
+      vfs_node_deref(old_node);
       return ret;
+    }
   }
 
-  vfs_stat_copy(&new_node->data, &node->data);
-  if ((ret = vfs_node_commit_and_free(new_node)) != 0)
-    return ret;
+  memcpy(&old_ptr, &old_node->ptr, sizeof(old_ptr));
+  memcpy(&old_node->ptr, &new_node->ptr, sizeof(old_node->ptr));
+  memcpy(&new_node->ptr, &old_ptr, sizeof(new_node->ptr));
 
-  node->data.flag &= ~VFS_INODE_FLAG_VALID;
-  return vfs_node_commit_and_free(node);
+  memcpy(old_node->data.name, new_node->data.name,
+         sizeof(old_node->data.name));
+
+  if ((ret = vfs_node_commit_and_deref(old_node)) != 0) {
+    vfs_node_deref(new_node);
+    return ret;
+  }
+  ret = vfs_node_delete(new_node, false);
+  vfs_node_deref(new_node);
+  return ret;
 }
 
 int vfs_fuse_link(const char *from, const char *to) {
@@ -875,8 +887,8 @@ int vfs_fuse_chmod(const char *path, mode_t mode) {
   if ((ret = vfs_node_lookup(path, &node, false)) != 0)
     return ret;
 
-  node->data.mode = normalize_mode(mode, S_IFREG, false);
-  return vfs_node_commit_and_free(node);
+  node->data.mode = mode;
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_chown(const char *path, uid_t uid, gid_t gid) {
@@ -890,7 +902,7 @@ int vfs_fuse_chown(const char *path, uid_t uid, gid_t gid) {
 
   node->data.uid = uid;
   node->data.gid = gid;
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_truncate(const char *path, off_t size) {
@@ -907,7 +919,7 @@ int vfs_fuse_truncate(const char *path, off_t size) {
 
   node->data.size  = size;
   node->data.mtime = time(NULL);
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_ftruncate(const char *path, off_t size,
@@ -923,7 +935,6 @@ int vfs_fuse_ftruncate(const char *path, off_t size,
     return 0;
 
   node->data.size = size;
-  node->modified  = true;
   return 0;
 }
 
@@ -938,7 +949,7 @@ int vfs_fuse_utime(const char *path, struct utimbuf *buf) {
 
   node->data.atime = buf->actime;
   node->data.mtime = buf->modtime;
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_utimens(const char *path, const struct timespec ts[2]) {
@@ -952,7 +963,7 @@ int vfs_fuse_utimens(const char *path, const struct timespec ts[2]) {
 
   node->data.atime = ts[0].tv_sec;
   node->data.mtime = ts[1].tv_sec;
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_open(const char *path, struct fuse_file_info *fi) {
@@ -963,12 +974,12 @@ int vfs_fuse_open(const char *path, struct fuse_file_info *fi) {
     return ret;
 
   if (!S_ISLNK(node->data.mode) && !S_ISREG(node->data.mode)) {
-    vfs_node_free(node);
+    vfs_node_deref(node);
     return -EISDIR;
   }
 
   fi->fh = vfs_fd_create(node);
-  return vfs_node_commit_and_free(node);
+  return vfs_node_commit_and_deref(node);
 }
 
 int vfs_fuse_read(const char *path, char *buf, uint64_t size,
@@ -996,7 +1007,7 @@ int vfs_fuse_write(const char *path, const char *buf, uint64_t size,
 
   node->data.size       = max(node->data.size,       size + offset);
   node->data.last_block = max(node->data.last_block, size + offset);
-  node->modified        = true;
+  node->data.mtime      = time(NULL);
   if ((ret = vfs_io_perform(node, VFS_IO_WRITE, (char*) buf, size,
                             offset)) != 0)
     return ret;
@@ -1005,27 +1016,24 @@ int vfs_fuse_write(const char *path, const char *buf, uint64_t size,
 
 int vfs_fuse_flush(const char *path, struct fuse_file_info *fi) {
   struct vfs_inode *node;
-  uint64_t size, last_block;
-  int ret;
 
+  if (store_get_readonly())
+    return -EPERM;
   if (!(node = vfs_fd_lookup(fi->fh)))
     return -ENOENT;
-
-  if (!node->modified)
-    return 0;
-
-  size       = node->data.size;
-  last_block = node->data.last_block;
-  if ((ret = vfs_node_rehash(node)) != 0)
-    return ret;
-
-  node->data.size       = size;
-  node->data.last_block = max(node->data.last_block, last_block);
-  node->data.mtime      = time(NULL);
   return vfs_node_commit(node);
 }
 
 int vfs_fuse_release(const char *path, struct fuse_file_info *fi) {
+  struct vfs_inode *node;
+  int ret;
+
+  if (!store_get_readonly()) {
+    if (!(node = vfs_fd_lookup(fi->fh)))
+      return -ENOENT;
+    if ((ret = vfs_node_commit(node)) != 0)
+      return ret;
+  }
   if (!vfs_fd_close(fi->fh))
     return -EFAULT;
   return 0;

@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <semaphore.h>
 #include <sys/poll.h>
 #include <openssl/md5.h>
 #include <openssl/hmac.h>
@@ -53,6 +54,10 @@ const char *amazon_key = NULL,
            *amazon_secret = NULL,
            *amazon_location = NULL;
 
+static CURLSH *amazon_curl_share = NULL;
+
+static sem_t amazon_curl_share_sem;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Load
 
@@ -62,8 +67,33 @@ void amazon_load() {
   if (!(amazon_secret = config_get("amazon-secret")))
     error("Must specify --amazon-secret");
   amazon_location = config_get("amazon-location");
+  amazon_load_curl();
+}
 
+static void amazon_curl_share_lock(CURL *handle, curl_lock_data data,
+                                   curl_lock_access access, void *useptr) {
+  sem_wait(&amazon_curl_share_sem);
+}
+
+static void amazon_curl_share_unlock(CURL *handle, curl_lock_data data,
+                                     void *useptr) {
+  sem_post(&amazon_curl_share_sem);
+}
+
+void amazon_load_curl() {
   curl_global_init(CURL_GLOBAL_ALL);
+
+  sem_init(&amazon_curl_share_sem, 0, 1);
+  amazon_curl_share = curl_share_init();
+  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_LOCKFUNC,
+                        amazon_curl_share_lock))
+    error("curl_share_setopt failed");
+  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_UNLOCKFUNC,
+                        amazon_curl_share_unlock))
+    error("curl_share_setopt failed");
+  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_SHARE,
+                        CURL_LOCK_DATA_DNS))
+    error("curl_share_setopt failed");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -302,8 +332,9 @@ int amazon_request_call(enum amazon_request_method method,
     amazon_request_set_req(c, data, data_len);
     amazon_request_perform(c);
     if (!c->resp_code || c->resp_code == 500) {
-      warning("Failure while contacting Amazon S3, retrying...");
       amazon_request_free(c);
+      warning("Failure while contacting Amazon S3, retrying...");
+      sleep(retry * 5);
       continue;
     }
     switch (c->resp_code) {
@@ -457,6 +488,7 @@ void amazon_request_perform(struct amazon_request *c) {
     error("Unable to init curl");
 
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt(curl, CURLOPT_SHARE, amazon_curl_share);
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method(c));
   if (c->method == AMAZON_REQUEST_HEAD)
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
