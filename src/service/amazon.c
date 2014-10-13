@@ -58,6 +58,8 @@ static CURLSH *amazon_curl_share = NULL;
 
 static sem_t amazon_curl_share_sem;
 
+static bool amazon_use_https = true;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Load
 
@@ -66,6 +68,8 @@ void amazon_load() {
     error("Must specify --amazon-key");
   if (!(amazon_secret = config_get("amazon-secret")))
     error("Must specify --amazon-secret");
+  if (config_get("dont-use-https"))
+    amazon_use_https = false;
   amazon_location = config_get("amazon-location");
   amazon_load_curl();
 }
@@ -493,7 +497,8 @@ void amazon_request_perform(struct amazon_request *c) {
   if (c->method == AMAZON_REQUEST_HEAD)
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-  if (asprintf(&host, "http://%s%s%s%s",
+  if (asprintf(&host, "%s://%s%s%s%s",
+               amazon_use_https ? "https" : "http",
                c->bucket ? c->bucket : "",
                c->bucket && *c->bucket ? "." : "",
                c->location,

@@ -50,6 +50,7 @@ static struct option opt_field[] = {
   { "nofork",              0,  NULL,  OPT_NRML    },
   { "norandom",            0,  NULL,  OPT_NRML    },
   { "force",               0,  NULL,  OPT_NRML    },
+  { "dont-use-https",      0,  NULL,  OPT_NRML    },
 
   { "cache-type",          1,  NULL,  OPT_NRML    },
   { "cache-max",           1,  NULL,  OPT_NRML    },
@@ -104,6 +105,7 @@ void usage() {
   fprintf(stderr, "\t%-25s Do not fork into background\n",      "--nofork");
   fprintf(stderr, "\t%-25s Do not use /dev/random\n",           "--norandom");
   fprintf(stderr, "\t%-25s Force mounting volume\n",            "--force");
+  fprintf(stderr, "\t%-25s Don't use HTTPS\n",                  "--dont-use-https");
   fprintf(stderr, "\n");
   fprintf(stderr, "Cache Arguments:\n");
   fprintf(stderr, "\t%-25s Cache type, must be one of:\n",      "--cache-type [type]");
