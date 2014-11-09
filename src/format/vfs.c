@@ -503,7 +503,7 @@ void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src) {
   dst->st_blksize = VFS_FAKE_BLOCK_SIZE;
   dst->st_blocks = ((dst->st_size + VFS_FAKE_REPORT_SIZE - 1) &
                    ~(VFS_FAKE_REPORT_SIZE - 1)) / VFS_FAKE_REPORT_SIZE;
-  dst->st_mode = dst->st_mode;
+  dst->st_mode = dst->st_mode & ~S_IFIFO;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
