@@ -59,6 +59,7 @@ extern const char *amazon_key, *amazon_secret, *amazon_location;
 
 void amazon_load();
 void amazon_load_curl();
+void amazon_load_openssl();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets

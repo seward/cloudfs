@@ -29,6 +29,7 @@ bool pack_compress(const char *in_buf, uint32_t in_len, char **out_buf,
     stderror("malloc");
 
   hdr = (struct pack_header*) sbuf;
+  memset(hdr, 0, sizeof(*hdr));
   hdr->flag = 0;
   hdr->orig_len = in_len;
 
@@ -37,7 +38,7 @@ bool pack_compress(const char *in_buf, uint32_t in_len, char **out_buf,
   if (compress((Bytef*) rbuf, &rlen, (const Bytef*) in_buf, in_len) == Z_OK)
     hdr->flag |= PACK_FLAG_COMPRESSED;
   else
-    memcpy(rbuf, in_buf, rlen);
+    memcpy(rbuf, in_buf, in_len);
 
   *out_buf = sbuf;
   *out_len = sizeof(*hdr) + rlen;

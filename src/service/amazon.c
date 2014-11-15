@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <semaphore.h>
+#include <pthread.h>
 #include <sys/poll.h>
 #include <openssl/md5.h>
 #include <openssl/hmac.h>
@@ -58,6 +59,8 @@ static CURLSH *amazon_curl_share = NULL;
 
 static sem_t amazon_curl_share_sem;
 
+static sem_t *amazon_openssl_sem = NULL;
+
 static bool amazon_use_https = true;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +73,8 @@ void amazon_load() {
     error("Must specify --amazon-secret");
   if (config_get("dont-use-https"))
     amazon_use_https = false;
+  else
+    amazon_load_openssl();
   amazon_location = config_get("amazon-location");
   amazon_load_curl();
 }
@@ -98,6 +103,31 @@ void amazon_load_curl() {
   if (curl_share_setopt(amazon_curl_share, CURLSHOPT_SHARE,
                         CURL_LOCK_DATA_DNS))
     error("curl_share_setopt failed");
+}
+
+static void amazon_openssl_locking_function(int mode, int n,
+                                            const char *file, int line) {
+  if (mode & CRYPTO_LOCK)
+    sem_wait(&amazon_openssl_sem[n]);
+  else
+    sem_post(&amazon_openssl_sem[n]);
+}
+
+static unsigned long amazon_openssl_id_function() {
+  return pthread_self();
+}
+
+void amazon_load_openssl() {
+  uint32_t i, num_locks;
+
+  num_locks = CRYPTO_num_locks();
+  if (!(amazon_openssl_sem = calloc(num_locks,
+                                    sizeof(*amazon_openssl_sem))))
+    stderror("calloc");
+  for (i = 0; i < num_locks; i++)
+    sem_init(&amazon_openssl_sem[i], 0, 1);
+  CRYPTO_set_id_callback(amazon_openssl_id_function);
+  CRYPTO_set_locking_callback(amazon_openssl_locking_function);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -337,7 +367,8 @@ int amazon_request_call(enum amazon_request_method method,
     amazon_request_perform(c);
     if (!c->resp_code || c->resp_code == 500) {
       amazon_request_free(c);
-      warning("Failure while contacting Amazon S3, retrying...");
+      if (retry >= 2)
+        warning("Failure while contacting Amazon S3, retrying...");
       sleep(retry * 5);
       continue;
     }
@@ -444,8 +475,7 @@ static void curdate(char *str, int32_t size) {
            tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tm.tm_gmtoff / 36));
 }
 
-static void base64_encode(const char *in_str, uint32_t in_len, char **out_str,
-                          uint32_t *out_len) {
+static void base64_encode(const char *in_str, uint32_t in_len, char **out_str) {
   static const char *base64_lookup =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       "abcdefghijklmnopqrstuvwxyz"
@@ -474,8 +504,6 @@ static void base64_encode(const char *in_str, uint32_t in_len, char **out_str,
   out[c] = 0;
 
   *out_str = out;
-  if (out_len)
-    *out_len = c;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -511,7 +539,7 @@ void amazon_request_perform(struct amazon_request *c) {
   curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) c->req_len);
 
   MD5((uint8_t*) c->req_data, c->req_len, (uint8_t*) dig);
-  base64_encode(dig, sizeof(dig), &md5, NULL);
+  base64_encode(dig, sizeof(dig), &md5);
   curdate(date, sizeof(date));
 
   auth = amazon_request_access(c, date, md5);
@@ -543,7 +571,7 @@ void amazon_request_perform(struct amazon_request *c) {
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, c);
 
   if ((ret = curl_easy_perform(curl)) != CURLE_OK)
-    warning("Curl perform failed: %s", curl_easy_strerror(ret));
+    warning("Curl failed: %s", curl_easy_strerror(ret));
   else
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &c->resp_code);
 
@@ -584,7 +612,7 @@ char *amazon_request_access(struct amazon_request *c, const char *date,
        (uint8_t*) data, strlen(data),
        (uint8_t*) mac, &mdlen);
 
-  base64_encode(mac, mdlen, &bmac, NULL);
+  base64_encode(mac, mdlen, &bmac);
   free(data);
 
   if (asprintf(&auth, "AWS %s:%s", amazon_key, bmac) < 0)

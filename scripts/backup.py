@@ -122,7 +122,8 @@ def pollout(pids, timeout=5):
 rsync = None
 cloudfs = None
 
-def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
+def backup(volume, path, exclude=None, one_file_system=False, disabled=False,
+           extra_rsync_flags=None):
   if disabled:
     return
 
@@ -136,7 +137,7 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 
   # And the volume.
   create_volume = uexec([CLOUDFS_PATH, "--config", CONFIG_FILE,
-                        "--create", "--volume", volume])
+                         "--create", "--volume", volume])
   create_volume.communicate()
 
   # Call rsync on source to backup directory.
@@ -173,7 +174,7 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
   # Call cloudfs to mount volume.
   global cloudfs  # Variable made global for signal handler
   cloudfs = uexec([CLOUDFS_PATH, "--config", CONFIG_FILE, "--force",
-                  "--nofork", "--volume", volume, "--mount", BACKUP_DIR])
+                   "--nofork", "--volume", volume, "--mount", BACKUP_DIR])
 
   # Wait until backup directory is mounted.
   while not ismounted():
@@ -185,13 +186,17 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 
   # Call rsync.
   global rsync
-  rsync = uexec(["rsync", "--delete", "--inplace", "--whole-file",
-                "-avp"] + options + paths + [BACKUP_DIR])
+  extra_rsync_flags = extra_rsync_flags or []
+  rsync = uexec(["rsync", "--delete", "--inplace", "-avp"] +
+                extra_rsync_flags + options + paths + [BACKUP_DIR])
   while rsync.returncode is None:
     pollout([cloudfs, rsync])
     if cloudfs.returncode is not None:
-      rsync.terminate()
-      rsync.wait()
+      try:
+        rsync.terminate()
+        rsync.wait()
+      except OSError:
+        pass
       log("Error, cloudfs unexpectedly terminated")
       return
 
@@ -205,8 +210,11 @@ def backup(volume, path, exclude=None, one_file_system=False, disabled=False):
 def graceful_exit(signum, frame):
   log("Caught signal %d, exiting" % signum)
   if rsync:
-    rsync.terminate()
-    rsync.wait()
+    try:
+      rsync.terminate()
+      rsync.wait()
+    except OSError:
+      pass
   if cloudfs:
     unmount()
     cloudfs.wait()
@@ -224,3 +232,4 @@ def run():
     time.sleep(60 * 60 * HOUR_WAIT)
 
 run()
+

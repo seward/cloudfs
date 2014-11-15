@@ -503,7 +503,13 @@ void vfs_stat_translate(struct stat *dst, struct vfs_inode_data *src) {
   dst->st_blksize = VFS_FAKE_BLOCK_SIZE;
   dst->st_blocks = ((dst->st_size + VFS_FAKE_REPORT_SIZE - 1) &
                    ~(VFS_FAKE_REPORT_SIZE - 1)) / VFS_FAKE_REPORT_SIZE;
-  dst->st_mode = dst->st_mode & ~S_IFIFO;
+  dst->st_mode = dst->st_mode;
+}
+
+bool vfs_is_mode_valid(mode_t mode) {
+  if (S_ISFIFO(mode) || S_ISCHR(mode))
+    return false;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -711,6 +717,8 @@ int vfs_fuse_mknod(const char *path, mode_t mode, dev_t rdev) {
 
   if ((ret = vfs_node_lookup(path, &node, true)) != 0)
     return ret;
+  if (!vfs_is_mode_valid(mode))
+    return -EPERM;
 
   node->data.mode = mode;
   node->data.rdev = rdev;
