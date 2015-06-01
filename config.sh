@@ -112,10 +112,10 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure $CC is installed"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" = "debianx" ]; then
     echo "Try: sudo apt-get install gcc"
   fi
-  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" = "fedorax" ]; then
     echo "Try: sudo yum install gcc"
   fi
   exit
@@ -150,10 +150,10 @@ EOF
     if [ "$?" != 0 ]; then
       echo "failed"
       echo "Please make sure libfuse is installed or use --with-fuse=DIR"
-      if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+      if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" = "debianx" ]; then
         echo "Try: sudo apt-get install libfuse-dev"
       fi
-      if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+      if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" = "fedorax" ]; then
         echo "Try: sudo yum install fuse-devel"
       fi
       exit
@@ -181,10 +181,10 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure openssl is installed or use --with-ssl=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" = "debianx" ]; then
     echo "Try: sudo apt-get install libssl-dev"
   fi
-  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" = "fedorax" ]; then
     echo "Try: sudo yum install openssl-devel"
   fi
   exit
@@ -208,7 +208,7 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure zlib is installed or use --with-zlib=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" = "debianx" ]; then
     echo "Try: sudo apt-get install zlib1g-dev"
   fi
   exit
@@ -232,10 +232,10 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure curl is installed or use --with-curl=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" = "debianx" ]; then
     echo "Try: sudo apt-get install libcurl4-openssl-dev"
   fi
-  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" = "fedorax" ]; then
     echo "Try: sudo yum install libcurl-devel"
   fi
   exit
