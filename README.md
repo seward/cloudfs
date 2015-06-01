@@ -3,8 +3,8 @@ cloudfs
 Cloudfs creates a virtual filesystem or block device on top of
 popular cloud storage services.  This filesystem can only be
 accessed with cloudfs.  It also supports transparent encryption
-and zlib compression. As of right now, I only have support
-for Amazon S3, but plan on adding others in the future.
+and zlib compression.  It currently supports Amazon S3 and Google
+Cloud Storage.
 
 
 Author
@@ -35,7 +35,7 @@ Compiling and installing
 
 2. Run make
 
-3. Run make install or copy bin/cloudfs to /usr/sbin/
+3. Run make install or copy bin/cloudfs to /usr/bin/
 
 4. Copy bin/cloudfs.conf to ~/.cloudfs.conf
 
