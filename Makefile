@@ -16,7 +16,7 @@ endif
 # Options
 
 NAME =		cloudfs
-VERSION =	0.4
+VERSION =	0.5
 
 BIN_PATH =	bin
 BIN =		cloudfs

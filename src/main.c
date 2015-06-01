@@ -134,6 +134,10 @@ void usage() {
   fprintf(stderr, "\t%-25s Access key ID\n",                    "--amazon-key [key]");
   fprintf(stderr, "\t%-25s Secret access key\n",                "--amazon-secret [key]");
   fprintf(stderr, "\n");
+  fprintf(stderr, "Arguments for google storage:\n");
+  fprintf(stderr, "\t%-25s Project ID\n",                       "--google-project-id [id]");
+  fprintf(stderr, "\t%-25s File to write auth token\n",         "--google-token-file [file]");
+  fprintf(stderr, "\n");
   fprintf(stderr, "Arguments for dummy storage:\n");
   fprintf(stderr, "\t%-25s Path to storage directory\n",        "--dummy-path [path]");
   fprintf(stderr, "\n");
