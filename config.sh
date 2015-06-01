@@ -1,6 +1,19 @@
 #!/bin/sh
 
 ###########################################################################
+# Grab distro information
+
+if [ -f /etc/lsb-release ]; then
+  . /etc/lsb-release
+fi
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+fi
+if [ ! -z "${ID}" ]; then
+  DISTRIB_ID="${ID}"
+fi
+
+###########################################################################
 # Re(set) environment variables
 
 if test -z "$CC"; then
@@ -10,10 +23,6 @@ fi
 FUSE=1
 CFLAGS=
 LDFLAGS=
-
-if [ -f /etc/lsb-release ]; then
-  . /etc/lsb-release
-fi
 
 ###########################################################################
 # Check for options
@@ -94,6 +103,26 @@ esac
 echo "done"
 
 ###########################################################################
+# Check for C compiler
+
+echo -n "* Checking for $CC ... "
+${CC} -x c - ${CFLAGS} ${LDFLAGS} -o /dev/null 2>/dev/null <<EOF
+  void main() { }
+EOF
+if [ "$?" != 0 ]; then
+  echo "failed"
+  echo "Please make sure $CC is installed"
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
+    echo "Try: sudo apt-get install gcc"
+  fi
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+    echo "Try: sudo yum install gcc"
+  fi
+  exit
+fi
+echo "done"
+
+###########################################################################
 # Check for fuse
 
 if [ "${FUSE}" -eq 1 ]; then
@@ -121,8 +150,11 @@ EOF
     if [ "$?" != 0 ]; then
       echo "failed"
       echo "Please make sure libfuse is installed or use --with-fuse=DIR"
-      if [ "${DISTRIB_ID}x" = "Ubuntux" ]; then
+      if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
         echo "Try: sudo apt-get install libfuse-dev"
+      fi
+      if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+        echo "Try: sudo yum install fuse-devel"
       fi
       exit
     fi
@@ -149,8 +181,11 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure openssl is installed or use --with-ssl=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
     echo "Try: sudo apt-get install libssl-dev"
+  fi
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+    echo "Try: sudo yum install openssl-devel"
   fi
   exit
 fi
@@ -173,7 +208,7 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure zlib is installed or use --with-zlib=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
     echo "Try: sudo apt-get install zlib1g-dev"
   fi
   exit
@@ -197,8 +232,11 @@ EOF
 if [ "$?" != 0 ]; then
   echo "failed"
   echo "Please make sure curl is installed or use --with-curl=DIR"
-  if [ "${DISTRIB_ID}x" = "Ubuntux" ]; then
+  if [ "${DISTRIB_ID}x" = "Ubuntux" ] || [ "${DISTRIB_ID}x" == "debianx" ]; then
     echo "Try: sudo apt-get install libcurl4-openssl-dev"
+  fi
+  if [ "${DISTRIB_ID}x" = "rhelx" ] || [ "${DISTRIB_ID}x" == "fedorax" ]; then
+    echo "Try: sudo yum install libcurl-devel"
   fi
   exit
 fi

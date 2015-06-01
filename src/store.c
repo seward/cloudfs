@@ -40,7 +40,8 @@ void store_load() {
   const struct store_intr_opt *opt, *opt_end;
 
   if (!(intr = config_get("store")))
-    error("Storage service must be specified using --store");
+    error("Storage service must be specified using --store, this value should "
+          "be in the cloudfs.conf. Please read the readme first.");
 
   if (config_get("readonly"))
     store_readonly = true;
