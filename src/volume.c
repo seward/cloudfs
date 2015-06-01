@@ -307,7 +307,7 @@ void volume_delete() {
   bool found;
 
   snprintf(obj_name, sizeof(obj_name), VOLUME_OBJECT_PREFIX "%s.",
-      volume_selected);
+           volume_selected);
   obj_len = strlen(obj_name);
 
   while (1) {

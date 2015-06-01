@@ -30,8 +30,6 @@ void dummy_load();
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets
 
-int dummy_list_bucket(const char *prefix, uint32_t max_count,
-                      struct store_list *list);
 int dummy_create_bucket(const char *bucket);
 int dummy_exists_bucket(const char *bucket);
 int dummy_delete_bucket(const char *bucket);

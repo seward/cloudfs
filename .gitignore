@@ -1,6 +1,6 @@
 *.o
 *.d
-.project
-.svn
+.*
+!/.gitignore
 bin/cloudfs
 config.mk

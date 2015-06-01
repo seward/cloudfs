@@ -25,10 +25,12 @@
 #include "log.h"
 #include "misc.h"
 #include "service/amazon.h"
+#include "service/base64.h"
+#include "service/curl_util.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class:       amazon
-// Description: Amazon web services storage
+// Description: Amazon S3 storage
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Service table
@@ -36,7 +38,6 @@
 const struct store_intr amazon_intr = {
   .load           = amazon_load,
 
-  .list_bucket    = amazon_list_bucket,
   .create_bucket  = amazon_create_bucket,
   .exists_bucket  = amazon_exists_bucket,
   .delete_bucket  = amazon_delete_bucket,
@@ -55,13 +56,7 @@ const char *amazon_key = NULL,
            *amazon_secret = NULL,
            *amazon_location = NULL;
 
-static CURLSH *amazon_curl_share = NULL;
-
-static sem_t amazon_curl_share_sem;
-
-static sem_t *amazon_openssl_sem = NULL;
-
-static bool amazon_use_https = true;
+static bool amazon_use_https = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Load
@@ -71,63 +66,12 @@ void amazon_load() {
     error("Must specify --amazon-key");
   if (!(amazon_secret = config_get("amazon-secret")))
     error("Must specify --amazon-secret");
-  if (config_get("dont-use-https"))
-    amazon_use_https = false;
-  else
-    amazon_load_openssl();
+  if (config_get("use-https")) {
+    amazon_use_https = true;
+    curl_load_openssl();
+  }
   amazon_location = config_get("amazon-location");
-  amazon_load_curl();
-}
-
-static void amazon_curl_share_lock(CURL *handle, curl_lock_data data,
-                                   curl_lock_access access, void *useptr) {
-  sem_wait(&amazon_curl_share_sem);
-}
-
-static void amazon_curl_share_unlock(CURL *handle, curl_lock_data data,
-                                     void *useptr) {
-  sem_post(&amazon_curl_share_sem);
-}
-
-void amazon_load_curl() {
-  curl_global_init(CURL_GLOBAL_ALL);
-
-  sem_init(&amazon_curl_share_sem, 0, 1);
-  amazon_curl_share = curl_share_init();
-  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_LOCKFUNC,
-                        amazon_curl_share_lock))
-    error("curl_share_setopt failed");
-  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_UNLOCKFUNC,
-                        amazon_curl_share_unlock))
-    error("curl_share_setopt failed");
-  if (curl_share_setopt(amazon_curl_share, CURLSHOPT_SHARE,
-                        CURL_LOCK_DATA_DNS))
-    error("curl_share_setopt failed");
-}
-
-static void amazon_openssl_locking_function(int mode, int n,
-                                            const char *file, int line) {
-  if (mode & CRYPTO_LOCK)
-    sem_wait(&amazon_openssl_sem[n]);
-  else
-    sem_post(&amazon_openssl_sem[n]);
-}
-
-static unsigned long amazon_openssl_id_function() {
-  return pthread_self();
-}
-
-void amazon_load_openssl() {
-  uint32_t i, num_locks;
-
-  num_locks = CRYPTO_num_locks();
-  if (!(amazon_openssl_sem = calloc(num_locks,
-                                    sizeof(*amazon_openssl_sem))))
-    stderror("calloc");
-  for (i = 0; i < num_locks; i++)
-    sem_init(&amazon_openssl_sem[i], 0, 1);
-  CRYPTO_set_id_callback(amazon_openssl_id_function);
-  CRYPTO_set_locking_callback(amazon_openssl_locking_function);
+  curl_load();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -240,23 +184,6 @@ static void xml_push_tags(struct store_list *list, const char *tag,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets
-
-int amazon_list_bucket(const char *prefix, uint32_t max_count,
-                       struct store_list *list) {
-  char *buf;
-  int ret;
-
-  ret = amazon_request_call(AMAZON_REQUEST_GET,
-                            "", "/",
-                            NULL, 0,
-                            &buf, NULL);
-
-  if (ret == SUCCESS)
-    xml_push_tags(list, "<Name>", buf);
-
-  free(buf);
-  return ret;
-}
 
 int amazon_create_bucket(const char *bucket) {
   char *xml;
@@ -475,37 +402,6 @@ static void curdate(char *str, int32_t size) {
            tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tm.tm_gmtoff / 36));
 }
 
-static void base64_encode(const char *in_str, uint32_t in_len, char **out_str) {
-  static const char *base64_lookup =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz"
-      "0123456789+/";
-  const char *ptr;
-  char *out;
-  uint8_t *in;
-  int32_t len;
-  uint32_t c;
-
-  len = (((in_len / 3) + 1) * 4) + 1;
-  if (!(out = malloc(len)))
-    stderror("malloc");
-
-  for (c = 0, ptr = in_str; ptr < in_str + in_len; ptr += 3) {
-    in = (uint8_t*)ptr;
-    len = (in_str + in_len) - ptr;
-
-    out[c++] = base64_lookup[in[0] >> 2];
-    out[c++] = base64_lookup[((in[0] & 0x03) << 4) |
-                             (len > 1 ? ((in[1] & 0xf0) >> 4) : 0)];
-    out[c++] = len > 1 ? base64_lookup[((in[1] & 0x0f) << 2) |
-                               (len > 2 ? ((in[2] & 0xc0) >> 6) : 0)] : '=';
-    out[c++] = len > 2 ? base64_lookup[in[2] & 0x3f] : '=';
-  }
-  out[c] = 0;
-
-  *out_str = out;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Generate and write request
 
@@ -513,14 +409,16 @@ void amazon_request_perform(struct amazon_request *c) {
   CURL *curl;
   CURLcode ret;
   struct curl_slist *header;
-  char dig[MD5_DIGEST_LENGTH], date[1 << 9],
-    *md5, *host, *auth;
+  char dig[MD5_DIGEST_LENGTH], date[1 << 9], *md5, *host, *auth;
 
   if (!(curl = curl_easy_init()))
     error("Unable to init curl");
 
+  if (amazon_use_https) {
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+  }
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-  curl_easy_setopt(curl, CURLOPT_SHARE, amazon_curl_share);
+  curl_easy_setopt(curl, CURLOPT_SHARE, curl_share_get());
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method(c));
   if (c->method == AMAZON_REQUEST_HEAD)
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);

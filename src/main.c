@@ -50,14 +50,13 @@ static struct option opt_field[] = {
   { "nofork",              0,  NULL,  OPT_NRML    },
   { "norandom",            0,  NULL,  OPT_NRML    },
   { "force",               0,  NULL,  OPT_NRML    },
-  { "dont-use-https",      0,  NULL,  OPT_NRML    },
+  { "use-https",           0,  NULL,  OPT_NRML    },
 
   { "cache-type",          1,  NULL,  OPT_NRML    },
   { "cache-max",           1,  NULL,  OPT_NRML    },
 
   { "create-bucket",       0,  NULL,  OPT_EXCL    },
   { "auto-create-bucket",  0,  NULL,  OPT_NRML    },
-  { "list-buckets",        0,  NULL,  OPT_EXCL    },
   { "delete-bucket",       0,  NULL,  OPT_EXCL    },
 
   { "create",              0,  NULL,  OPT_EXCL    },
@@ -91,7 +90,7 @@ void usage() {
   fprintf(stderr, "\n");
   fprintf(stderr, "Required Arguments:\n");
   fprintf(stderr, "\t%-25s Storage service, must be one of:\n", "--store [service]");
-  fprintf(stderr, "\t%-25s     dummy, amazon\n",                "");
+  fprintf(stderr, "\t%-25s     dummy, amazon, google\n",        "");
   fprintf(stderr, "\t%-25s Bucket\n",                           "--bucket [name]");
   fprintf(stderr, "\t%-25s Volume\n",                           "--volume [name]");
   fprintf(stderr, "\n");
@@ -105,7 +104,7 @@ void usage() {
   fprintf(stderr, "\t%-25s Do not fork into background\n",      "--nofork");
   fprintf(stderr, "\t%-25s Do not use /dev/random\n",           "--norandom");
   fprintf(stderr, "\t%-25s Force mounting volume\n",            "--force");
-  fprintf(stderr, "\t%-25s Don't use HTTPS\n",                  "--dont-use-https");
+  fprintf(stderr, "\t%-25s Use HTTPS for storage requests\n",   "--use-https");
   fprintf(stderr, "\n");
   fprintf(stderr, "Cache Arguments:\n");
   fprintf(stderr, "\t%-25s Cache type, must be one of:\n",      "--cache-type [type]");
@@ -116,7 +115,6 @@ void usage() {
   fprintf(stderr, "Bucket operations:\n");
   fprintf(stderr, "\t%-25s Create bucket\n",                    "--create-bucket");
   fprintf(stderr, "\t%-25s Create bucket if non-existent\n",    "--auto-create-bucket");
-  fprintf(stderr, "\t%-25s Lists buckets\n",                    "--list-buckets");
   fprintf(stderr, "\t%-25s Delete bucket\n",                    "--delete-bucket");
   fprintf(stderr, "\n");
   fprintf(stderr, "Volume operations:\n");

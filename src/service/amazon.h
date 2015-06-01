@@ -64,8 +64,6 @@ void amazon_load_openssl();
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets
 
-int amazon_list_bucket(const char *prefix, uint32_t max_count,
-                       struct store_list *list);
 int amazon_create_bucket(const char *bucket);
 int amazon_exists_bucket(const char *bucket);
 int amazon_delete_bucket(const char *bucket);

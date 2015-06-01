@@ -21,7 +21,6 @@
 
 static const struct bucket_oper bucket_oper_list[] = {
   { "create-bucket", bucket_create },
-  {  "list-buckets", bucket_list   },
   { "delete-bucket", bucket_delete },
 };
 
@@ -79,22 +78,6 @@ void bucket_create() {
     error("Unable to create bucket \"%s\"", bucket_selected);
 
   notice("Bucket \"%s\" has been created", bucket_selected);
-}
-
-void bucket_list() {
-  struct store_list *list;
-  uint32_t i;
-
-  list = store_list_new();
-
-  if (store_list_bucket(NULL, BUCKET_MAX, list) != SUCCESS)
-    error("Unable to list buckets");
-
-  notice("List of buckets:");
-  for (i = 0; i < list->size; i++)
-    notice("  %s", list->item[i]);
-
-  store_list_free(list);
 }
 
 void bucket_delete() {

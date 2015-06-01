@@ -34,7 +34,6 @@ void bucket_unload();
 // Section:     Bucket operation functions
 
 void bucket_create();
-void bucket_list();
 void bucket_delete();
 
 ////////////////////////////////////////////////////////////////////////////////

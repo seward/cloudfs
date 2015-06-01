@@ -93,10 +93,7 @@ void vfs_mount(const struct volume_metadata *md, const char *path) {
 
   notice("Volume mounting on %s", path);
 
-  if (!config_get("nofork")) {
-    if (fork())
-      exit(0);
-  }
+  misc_maybe_fork();
 
   object_load();
 

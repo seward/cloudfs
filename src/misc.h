@@ -40,3 +40,9 @@
 #ifndef __bool_true_false_are_defined
 typedef enum bool { false = 0, true = 1 } bool;
 #endif
+
+////////////////////////////////////////////////////////////////////////////////
+// Section:     Curl-safe fork
+
+void misc_maybe_fork();
+

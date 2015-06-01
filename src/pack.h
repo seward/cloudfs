@@ -22,7 +22,7 @@ enum {
 struct pack_header {
   uint8_t flag;
   uint32_t orig_len;
-} __attribute__ ((aligned(8)));
+} __attribute__((aligned(8)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Compression / Uncompression

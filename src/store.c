@@ -13,6 +13,7 @@
 #include "store.h"
 #include "service/dummy.h"
 #include "service/amazon.h"
+#include "service/google.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class:       store
@@ -24,6 +25,7 @@
 static const struct store_intr_opt store_intr_opt_list[] = {
   {  "dummy", &dummy_intr  },
   { "amazon", &amazon_intr },
+  { "google", &google_intr },
 };
 
 static const struct store_intr *store_intr_ptr = NULL;
@@ -69,11 +71,6 @@ void store_unload() {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Storage interface functions
-
-int store_list_bucket(const char *prefix, uint32_t max_count,
-                      struct store_list *list) {
-  return store_intr_ptr->list_bucket(prefix, max_count, list);
-}
 
 int store_create_bucket(const char *bucket) {
   assert(bucket != NULL);

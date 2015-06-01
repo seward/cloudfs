@@ -10,6 +10,7 @@
 // Section:     Required includes
 
 #include <stdint.h>
+#include <stdbool.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Service interface objects
@@ -33,8 +34,6 @@ struct store_intr {
   void (*load)         (void);
   void (*unload)       (void);
 
-  int (*list_bucket)   (const char *prefix, uint32_t max_count,
-                        struct store_list *list);
   int (*create_bucket) (const char *bucket);
   int (*exists_bucket) (const char *bucket);
   int (*delete_bucket) (const char *bucket);
@@ -63,8 +62,6 @@ void store_unload();
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Interface functions
 
-int store_list_bucket(const char *prefix, uint32_t max_count,
-                      struct store_list *list);
 int store_create_bucket(const char *bucket);
 int store_exists_bucket(const char *bucket);
 int store_delete_bucket(const char *bucket);

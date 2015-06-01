@@ -84,19 +84,11 @@ done
 echo -n "* Checking for platform ... "
 case `uname -s` in
   Linux)
-    CFLAGS="${CFLAGS} -DOS_LINUX"
-    ;;
-  FreeBSD)
-    CFLAGS="${CFLAGS} -DOS_FREEBSD"
-    ;;
-  SunOS)
-    CFLAGS="${CFLAGS} -DOS_SOLARIS"
-    ;;
-  Darwin)
-    CFLAGS="${CFLAGS} -DOS_DARWIN"
     ;;
   *)
-    CFLAGS="${CFLAGS} -DOS_OTHER"
+    echo "failed"
+    echo "Cloudfs currently only works for Linux, sorry."
+    exit
     ;;
 esac
 echo "done"

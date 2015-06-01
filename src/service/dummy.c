@@ -26,7 +26,6 @@
 const struct store_intr dummy_intr = {
   .load           = dummy_load,
 
-  .list_bucket    = dummy_list_bucket,
   .create_bucket  = dummy_create_bucket,
   .exists_bucket  = dummy_exists_bucket,
   .delete_bucket  = dummy_delete_bucket,
@@ -53,35 +52,6 @@ void dummy_load() {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets
-
-int dummy_list_bucket(const char *prefix, uint32_t max_count,
-                      struct store_list *list) {
-  DIR *dir;
-  struct dirent *ent;
-  uint32_t count;
-
-  if (!(dir = opendir(dummy_path))) {
-    if (errno == ENOENT)
-      return NOT_FOUND;
-    stdwarning("opendir");
-    return SYS_ERROR;
-  }
-
-  count = 0;
-  while (count < max_count && (ent = readdir(dir))) {
-    if (ent->d_type != DT_DIR)
-      continue;
-    if (prefix && strncmp(ent->d_name, prefix, strlen(prefix)) < 0)
-      continue;
-    if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
-      continue;
-    store_list_push(list, ent->d_name);
-    count++;
-  }
-
-  closedir(dir);
-  return SUCCESS;
-}
 
 int dummy_create_bucket(const char *bucket) {
   char fname[DUMMY_MAX_PATH];

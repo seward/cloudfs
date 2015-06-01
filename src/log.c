@@ -47,7 +47,7 @@ void log_load(char *fname) {
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Write to log
 
-void log_write(char *str, ...) {
+void log_write(const char *str, ...) {
   va_list args;
   char time_str[1<<8], *buf, *tok, *ptr;
   bool first, timestamp;
