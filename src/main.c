@@ -72,6 +72,11 @@ static struct option opt_field[] = {
   { "amazon-key",          1,  NULL,  OPT_NRML    },
   { "amazon-secret",       1,  NULL,  OPT_NRML    },
 
+  { "google-client-id",    1,  NULL,  OPT_NRML    },
+  { "google-client-secret",1,  NULL,  OPT_NRML    },
+  { "google-project-id",   1,  NULL,  OPT_NRML    },
+  { "google-token-file",   1,  NULL,  OPT_NRML    },
+
   { "dummy-path",          1,  NULL,  OPT_NRML    },
   { NULL,                  0,  NULL,  0           }
 };
@@ -135,6 +140,8 @@ void usage() {
   fprintf(stderr, "\t%-25s Secret access key\n",                "--amazon-secret [key]");
   fprintf(stderr, "\n");
   fprintf(stderr, "Arguments for google storage:\n");
+  fprintf(stderr, "\t%-25s Client ID\n",                        "--google-client-id [id]");
+  fprintf(stderr, "\t%-25s Client Secret\n",                    "--google-client-secret [key]");
   fprintf(stderr, "\t%-25s Project ID\n",                       "--google-project-id [id]");
   fprintf(stderr, "\t%-25s File to write auth token\n",         "--google-token-file [file]");
   fprintf(stderr, "\n");

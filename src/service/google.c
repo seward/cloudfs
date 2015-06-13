@@ -55,6 +55,10 @@ const struct store_intr google_intr = {
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Global variables
 
+static const char *google_client_id = NULL;
+
+static const char *google_client_secret = NULL;
+
 static const char *google_project_id = NULL;
 
 static char google_access_token[GOOGLE_ACCESS_TOKEN_SIZE];
@@ -76,6 +80,10 @@ void google_load() {
   FILE *token_file;
 
   sem_init(&google_access_token_sem, 0, 1);
+  if (!(google_client_id = config_get("google-client-id")))
+    error("Must specify --google-client-id");
+  if (!(google_client_secret = config_get("google-client-secret")))
+    error("Must specify --google-client-secret");
   if (!(google_project_id = config_get("google-project-id")))
     error("Must specify --google-project-id");
 
@@ -119,10 +127,10 @@ void google_request_refresh_token() {
   printf("To allow cloudfs to access your Google Cloud Storage account,\n");
   printf("please visit the following URL in your browser:\n\n");
   printf(
-      "  https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID
+      "  https://accounts.google.com/o/oauth2/auth?client_id=%s"
       "&redirect_uri=urn%%3aietf%%3awg%%3aoauth%%3a2.0%%3aoob&scope=https%%3a%%"
       "2f%%2fwww.googleapis.com%%2fauth%%2fdevstorage.read_write&response_type="
-      "code&access_type=offline\n\n");
+      "code&access_type=offline\n\n", google_client_id);
   printf("And enter the authorization code provided: ");
 
   if (!fgets(auth_code, sizeof(auth_code), stdin))
@@ -171,16 +179,15 @@ bool google_get_token(const char *key, bool refresh) {
   data = NULL;
   if (!refresh) {
     asprintf(&data,
-             "code=%s&client_id=" GOOGLE_CLIENT_ID
-             "&client_secret=" GOOGLE_CLIENT_SECRET
-             "&redirect_uri=urn%%3aietf%%3awg%%3aoauth%%3a2.0%%3aoob&grant_"
-             "type=authorization_code",
-             key);
+             "code=%s&client_id=%s&client_secret=%s"
+             "&redirect_uri=urn%%3aietf%%3awg%%3aoauth%%3a2.0%%3aoob"
+             "&grant_type=authorization_code",
+             key, google_client_id, google_client_secret);
   } else {
     asprintf(&data,
-             "refresh_token=%s&client_id=" GOOGLE_CLIENT_ID
-             "&client_secret=" GOOGLE_CLIENT_SECRET "&grant_type=refresh_token",
-             key);
+             "refresh_token=%s&client_id=%s&client_secret=%s"
+             "&grant_type=refresh_token",
+             key, google_client_id, google_client_secret);
   }
 
   if (!(curl = curl_easy_init()))

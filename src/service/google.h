@@ -23,10 +23,6 @@ extern const struct store_intr google_intr;
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     OAuth information
 
-#define GOOGLE_CLIENT_ID \
-  "101150140364-appnj26e794v5ajg5hf4m46738qjg1qt.apps.googleusercontent.com"
-#define GOOGLE_CLIENT_SECRET "_AIHbMudvcA3WRJ_TnNxfjEd"
-
 #define GOOGLE_ACCESS_TOKEN_SIZE (1 << 10)
 #define GOOGLE_REFRESH_TOKEN_SIZE (1 << 10)
 
