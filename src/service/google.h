@@ -32,10 +32,7 @@ extern const struct store_intr google_intr;
 // Section:     Load
 
 void google_load();
-FILE *google_open_token_file(const char *mode);
-void google_request_refresh_token();
-bool google_request_auth_token();
-bool google_get_token(const char *key, bool refresh);
+bool google_get_token();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Buckets

@@ -70,85 +70,25 @@ static char google_refresh_token[GOOGLE_REFRESH_TOKEN_SIZE];
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Load
 
-static void strtrim(char *buf) {
-  uint32_t len = strlen(buf);
-  while (len && isspace(buf[len - 1]))
-    buf[--len] = 0;
-}
-
 void google_load() {
-  FILE *token_file;
+  const char *refresh_token;
 
   sem_init(&google_access_token_sem, 0, 1);
   if (!(google_client_id = config_get("google-client-id")))
     error("Must specify --google-client-id");
   if (!(google_client_secret = config_get("google-client-secret")))
     error("Must specify --google-client-secret");
+  if (!(refresh_token = config_get("google-refresh-token")))
+    error("Must specify --google-refresh-token");
+  strncpy(google_refresh_token, refresh_token, GOOGLE_REFRESH_TOKEN_SIZE);
   if (!(google_project_id = config_get("google-project-id")))
     error("Must specify --google-project-id");
 
   curl_load();
   curl_load_openssl();
 
-  if ((token_file = google_open_token_file("r"))) {
-    if (!fgets(google_refresh_token, sizeof(google_refresh_token), token_file))
-      error("Failed to read google token file");
-    strtrim(google_refresh_token);
-    if (!*google_refresh_token)
-      error("Failed to read google token file");
-    fclose(token_file);
-
-    if (!google_request_auth_token())
-      error("Failed to get google authorization token");
-  } else {
-    google_request_refresh_token();
-  }
-}
-
-FILE *google_open_token_file(const char *mode) {
-  const char *token_file;
-  FILE *file;
-  wordexp_t p;
-
-  if (!(token_file = config_get("google-token-file")))
-    error("Must specify --google-token-file");
-
-  if (wordexp(token_file, &p, WRDE_NOCMD) != 0 || p.we_wordc < 1)
-    error("Invalid google token file specified: %s", token_file);
-  file = fopen(p.we_wordv[0], mode);
-  wordfree(&p);
-  return file;
-}
-
-void google_request_refresh_token() {
-  char auth_code[1 << 10];
-  FILE *token_file;
-
-  printf("To allow cloudfs to access your Google Cloud Storage account,\n");
-  printf("please visit the following URL in your browser:\n\n");
-  printf(
-      "  https://accounts.google.com/o/oauth2/auth?client_id=%s"
-      "&redirect_uri=urn%%3aietf%%3awg%%3aoauth%%3a2.0%%3aoob&scope=https%%3a%%"
-      "2f%%2fwww.googleapis.com%%2fauth%%2fdevstorage.read_write&response_type="
-      "code&access_type=offline\n\n", google_client_id);
-  printf("And enter the authorization code provided: ");
-
-  if (!fgets(auth_code, sizeof(auth_code), stdin))
-    error("Failed to read authorization code");
-  strtrim(auth_code);
-  if (!*auth_code)
-    error("Invalid authorization code");
-
-  if (!google_get_token(auth_code, false))
+  if (!google_get_token())
     error("Failed to get google authorization token");
-  if (!(token_file = google_open_token_file("w")))
-    error("Failed to open google token file");
-  fputs(google_refresh_token, token_file);
-  fclose(token_file);
-}
-
-bool google_request_auth_token() {
-  return google_get_token(google_refresh_token, true);
 }
 
 struct json_write_buf {
@@ -167,28 +107,21 @@ static size_t json_write_callback(void *ptr, size_t size, size_t nmemb,
     stderror("realloc");
   memcpy(write_buf->buf + write_buf->size, ptr, size);
   write_buf->buf[write_buf->size + size] = 0;
+  write_buf->size += size;
   return size;
 }
 
-bool google_get_token(const char *key, bool refresh) {
+bool google_get_token() {
   char *data;
   CURL *curl;
   CURLcode ret;
   struct json_write_buf write_buf = {NULL, 0};
 
   data = NULL;
-  if (!refresh) {
-    asprintf(&data,
-             "code=%s&client_id=%s&client_secret=%s"
-             "&redirect_uri=urn%%3aietf%%3awg%%3aoauth%%3a2.0%%3aoob"
-             "&grant_type=authorization_code",
-             key, google_client_id, google_client_secret);
-  } else {
-    asprintf(&data,
-             "refresh_token=%s&client_id=%s&client_secret=%s"
-             "&grant_type=refresh_token",
-             key, google_client_id, google_client_secret);
-  }
+  asprintf(&data,
+           "refresh_token=%s&client_id=%s&client_secret=%s"
+           "&grant_type=refresh_token",
+           google_refresh_token, google_client_id, google_client_secret);
 
   if (!(curl = curl_easy_init()))
     error("Unable to init curl");
@@ -206,7 +139,7 @@ bool google_get_token(const char *key, bool refresh) {
   } else {
     map_t json;
     const char *token;
-    
+
     if (!(json = json_load(write_buf.buf)))
       error("Failed to load json auth response: %s", write_buf.buf);
 
@@ -216,8 +149,6 @@ bool google_get_token(const char *key, bool refresh) {
     strncpy(google_access_token, token, GOOGLE_ACCESS_TOKEN_SIZE);
     if ((token = map_get_str(json, "refresh_token"))) {
       strncpy(google_refresh_token, token, GOOGLE_REFRESH_TOKEN_SIZE);
-    } else if (!refresh) {
-      error("Google OAuth failed to provide refresh token");
     }
     sem_post(&google_access_token_sem);
   }
@@ -384,7 +315,7 @@ int google_api_call(const char *method, const char *url, uint32_t flags,
         break;
 
       case 401:
-        if (!google_request_auth_token())
+        if (!google_get_token())
           warning("Failed to get google authorization token");
 
       case 500:
