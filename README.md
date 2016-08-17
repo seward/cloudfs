@@ -13,8 +13,6 @@ Benjamin Kittridge
 
 bysin@bysin.net
 
-http://byteworm.com
-
 
 Requirements
 ----
