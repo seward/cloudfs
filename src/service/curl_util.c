@@ -68,15 +68,15 @@ void curl_load() {
     error("curl_share_setopt failed");
 }
 
-static void curl_openssl_locking_function(int mode, int n, const char *file,
-                                          int line) {
+void curl_openssl_locking_function(int mode, int n, const char *file,
+                                   int line) {
   if (mode & CRYPTO_LOCK)
     sem_wait(&curl_openssl_sem[n]);
   else
     sem_post(&curl_openssl_sem[n]);
 }
 
-static unsigned long openssl_id_function() {
+unsigned long openssl_id_function() {
   return pthread_self();
 }
 

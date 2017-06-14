@@ -32,8 +32,6 @@ static uint8_t crypt_cipher_key[CRYPT_KEY_SIZE];
 
 static int32_t crypt_blocksize = 0;
 
-static bool crypt_use_random = true;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Crypt construction / destruction
 
@@ -58,9 +56,6 @@ void crypt_load() {
 
   crypt_blocksize = EVP_CIPHER_block_size(crypt_cipher);
   crypt_cipher_enabled = true;
-
-  if (config_get("norandom"))
-    crypt_use_random = false;
 }
 
 void crypt_unload() {
@@ -141,7 +136,7 @@ bool crypt_has_cipher() {
 
 bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf,
                uint32_t *out_len) {
-  EVP_CIPHER_CTX ctx;
+  EVP_CIPHER_CTX *ctx;
   uint8_t iv[CRYPT_IV_SIZE];
   char *out_rbuf;
   int32_t out_rlen, out_flen;
@@ -151,23 +146,16 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf,
     return false;
   }
 
-  if (crypt_use_random) {
-    if (RAND_bytes(iv, sizeof(iv)) <= 0) {
-      warning("RAND_bytes failed");
-      return false;
-    }
-  } else {
-    if (RAND_pseudo_bytes(iv, sizeof(iv)) < 0) {
-      warning("RAND_pseudo_bytes failed");
-      return false;
-    }
+  if (RAND_bytes(iv, sizeof(iv)) <= 0) {
+    warning("RAND_bytes failed");
+    return false;
   }
 
-  EVP_CIPHER_CTX_init(&ctx);
+  ctx = EVP_CIPHER_CTX_new();
 
-  if (!EVP_EncryptInit_ex(&ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
+  if (!EVP_EncryptInit_ex(ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
     warning("EVP_EncryptInit_ex failed");
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
 
@@ -176,19 +164,19 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf,
   memcpy(out_rbuf, iv, sizeof(iv));
   out_rlen = sizeof(iv);
 
-  if (!EVP_EncryptUpdate(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen,
-             (uint8_t*) in_buf, in_len)) {
+  if (!EVP_EncryptUpdate(ctx, (uint8_t *)out_rbuf + out_rlen, &out_flen,
+                         (uint8_t *)in_buf, in_len)) {
     warning("EVP_EncryptUpdate failed");
     free(out_rbuf);
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
   out_rlen += out_flen;
 
-  if (!EVP_EncryptFinal_ex(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen)) {
+  if (!EVP_EncryptFinal_ex(ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen)) {
     warning("EVP_EncryptFinal_ex failed");
     free(out_rbuf);
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
   out_rlen += out_flen;
@@ -197,13 +185,13 @@ bool crypt_enc(const char *in_buf, uint32_t in_len, char **out_buf,
   *out_buf = out_rbuf;
   *out_len = out_rlen;
 
-  EVP_CIPHER_CTX_cleanup(&ctx);
+  EVP_CIPHER_CTX_free(ctx);
   return true;
 }
 
 bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
                uint32_t *out_len, bool suppress_error) {
-  EVP_CIPHER_CTX ctx;
+  EVP_CIPHER_CTX *ctx;
   uint8_t iv[CRYPT_IV_SIZE];
   char *out_rbuf;
   int32_t out_rlen, out_flen;
@@ -221,12 +209,12 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
   in_buf += sizeof(iv);
   in_len -= sizeof(iv);
 
-  EVP_CIPHER_CTX_init(&ctx);
+  ctx = EVP_CIPHER_CTX_new();
 
-  if (!EVP_DecryptInit_ex(&ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
+  if (!EVP_DecryptInit_ex(ctx, crypt_cipher, NULL, crypt_cipher_key, iv)) {
     if (!suppress_error)
       warning("EVP_DecryptInit_ex failed");
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
 
@@ -234,21 +222,21 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
     stderror("malloc");
   out_rlen = 0;
 
-  if (!EVP_DecryptUpdate(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen,
-             (uint8_t*) in_buf, in_len)) {
+  if (!EVP_DecryptUpdate(ctx, (uint8_t *)out_rbuf + out_rlen, &out_flen,
+                         (uint8_t *)in_buf, in_len)) {
     if (!suppress_error)
       warning("EVP_DecryptUpdate failed");
     free(out_rbuf);
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
   out_rlen += out_flen;
 
-  if (!EVP_DecryptFinal_ex(&ctx, (uint8_t*) out_rbuf + out_rlen, &out_flen)) {
+  if (!EVP_DecryptFinal_ex(ctx, (uint8_t *)out_rbuf + out_rlen, &out_flen)) {
     if (!suppress_error)
       warning("EVP_DecryptFinal_ex failed");
     free(out_rbuf);
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return false;
   }
   out_rlen += out_flen;
@@ -257,6 +245,6 @@ bool crypt_dec(const char *in_buf, uint32_t in_len, char **out_buf,
   *out_buf = out_rbuf;
   *out_len = out_rlen;
 
-  EVP_CIPHER_CTX_cleanup(&ctx);
+  EVP_CIPHER_CTX_free(ctx);
   return true;
 }
