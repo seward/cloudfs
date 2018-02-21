@@ -28,6 +28,7 @@ SRC =		$(patsubst %.c,%.o,$(wildcard ${SRC_PATH}/*.c)) \
 
 LINK_ARG =	-lpthread ${LDFLAGS}
 COMPILE_ARG =	-g -iquote ${SRC_PATH} -Wimplicit -Werror -Wall -Wextra \
+		-Wno-implicit-fallthrough \
 		-Wno-unused-result -Wno-missing-field-initializers \
 		-Wno-unused-parameter -Wno-sign-compare --std=gnu99 \
 		-D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DVERSION=\"${VERSION}\" \
