@@ -126,8 +126,8 @@ void object_load_thread() {
 
   pthread_attr_init(&pattr);
   pthread_attr_setstacksize(&pattr, OBJECT_THREAD_STACK_SIZE);
-  ret = pthread_create(&object_cache_thread_id, &pattr,
-                       (void *(*)(void*)) object_cache_thread, NULL);
+  ret = pthread_create(&object_cache_thread_id, &pattr, &object_cache_thread,
+                       NULL);
   pthread_attr_destroy(&pattr);
 
   if (ret < 0)

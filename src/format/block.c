@@ -236,9 +236,9 @@ void block_nbd_spawn_thread() {
   pthread_attr_setstacksize(&pattr, BLOCK_THREAD_STACK_SIZE);
   pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_DETACHED);
 
-  pthread_create(&pid, &pattr, (void *(*)(void*)) block_nbd_thread_doit, NULL);
+  pthread_create(&pid, &pattr, &block_nbd_thread_doit, NULL);
 #ifdef LOAD_PARTITION_TABLE
-  pthread_create(&pid, &pattr, (void *(*)(void*)) block_nbd_thread_sync, NULL);
+  pthread_create(&pid, &pattr, &block_nbd_thread_sync, NULL);
 #endif
 
   pthread_attr_destroy(&pattr);
