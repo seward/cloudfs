@@ -244,14 +244,16 @@ void block_nbd_spawn_thread() {
   pthread_attr_destroy(&pattr);
 }
 
-void block_nbd_thread_doit(void *__unused) {
+void *block_nbd_thread_doit(void *__unused) {
   ioctl(block_nbd_dev, NBD_DO_IT);
+  return NULL;
 }
 
-void block_nbd_thread_sync(void *__unused) {
+void *block_nbd_thread_sync(void *__unused) {
   sleep(1);
   sync();
   ioctl(block_nbd_dev, BLKRRPART);
+  return NULL;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

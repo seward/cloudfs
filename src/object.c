@@ -610,7 +610,7 @@ void object_cache_destroy(struct object_cache *p) {
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Object cache thread
 
-void object_cache_thread(void *__unused) {
+void *object_cache_thread(void *__unused) {
   struct timespec tm;
   uint32_t interval;
   bool want_post, queue_empty;
@@ -634,6 +634,7 @@ void object_cache_thread(void *__unused) {
     if (want_post)
       sem_post(&object_cache_thread_flushed);
   }
+  return NULL;
 }
 
 bool object_cache_thread_fulfill(bool *queue_empty) {

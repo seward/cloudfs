@@ -57,8 +57,8 @@ int32_t block_nbd_accept(int32_t lfd);
 int32_t block_nbd_connect();
 void block_nbd_tcp_nodelay(int32_t fd);
 void block_nbd_spawn_thread();
-void block_nbd_thread_doit(void *__unused);
-void block_nbd_thread_sync(void *__unused);
+void *block_nbd_thread_doit(void *__unused);
+void *block_nbd_thread_sync(void *__unused);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Process nbd requests
