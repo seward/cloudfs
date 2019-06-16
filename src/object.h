@@ -147,5 +147,5 @@ void object_cache_destroy(struct object_cache *p);
 ////////////////////////////////////////////////////////////////////////////////
 // Section:     Object cache thread
 
-void object_cache_thread(void *__unused);
+void *object_cache_thread(void *__unused);
 bool object_cache_thread_fulfill(bool *queue_empty);
